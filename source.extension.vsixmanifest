@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
+  <Metadata>
+    <Identity Id="CodeBlockEndTag.KhaosCoders.5743e483-e347-4815-8c9d-7fc46ca75382" Version="1.2.3" Language="en-US" Publisher="Benjamin Buchfink" />
+    <DisplayName>CodeBlockEndTag</DisplayName>
+    <Description xml:space="preserve">Adds an info tag to each code block end</Description>
+    <MoreInfo>https://github.com/KhaosCoders/VSCodeBlockEndTag</MoreInfo>
+    <Icon>Resources\CBETagPackage.ico</Icon>
+    <Tags>code, block, codeblock, end, tag, tagger, bracket, brackets, info, information, condition, vscommand, vscommands</Tags>
+  </Metadata>
+  <Installation>
+    <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[14.0]" />
+  </Installation>
+  <Dependencies>
+    <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
+    <Dependency d:Source="Installed" Id="Microsoft.VisualStudio.MPF.14.0" DisplayName="Visual Studio MPF 14.0" Version="[14.0,15.0)" />
+  </Dependencies>
+  <Assets>
+    <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
+    <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
+  </Assets>
+</PackageManifest>
