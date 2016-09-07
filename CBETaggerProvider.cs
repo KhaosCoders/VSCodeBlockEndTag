@@ -24,7 +24,7 @@ namespace CodeBlockEndTag
         internal ITextBufferFactoryService TextBufferFactory { get; set; }
 
         [Import]
-        internal IViewTagAggregatorFactoryService TagAggregatorService { get; set; }
+        internal ITextSearchService TextSearchService { get; set; }
 #pragma warning restore CS0649
 
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
@@ -39,10 +39,7 @@ namespace CodeBlockEndTag
             ITextStructureNavigator textStructureNavigator =
                 TextStructureNavigatorSelector.GetTextStructureNavigator(buffer);
 
-            ITagAggregator<IClassificationTag> aggregator = 
-                TagAggregatorService.CreateTagAggregator<IClassificationTag>(textView);
-
-            return new CBETagger(this, textView as IWpfTextView, buffer, textStructureNavigator, aggregator) as ITagger<T>;
+            return new CBETagger(this, textView as IWpfTextView, buffer, textStructureNavigator, TextSearchService) as ITagger<T>;
         }
     }
 }

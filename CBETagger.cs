@@ -17,7 +17,7 @@ namespace CodeBlockEndTag
 
         #region Properties
 
-        public ITagAggregator<IClassificationTag> ClassificationTagAggregator { get; private set; }
+        ITextSearchService TextSearchService { get; set; }
 
         public ITextStructureNavigator TextStructureNavigator { get; private set; }
 
@@ -45,7 +45,7 @@ namespace CodeBlockEndTag
 
         #region Ctor
 
-        internal CBETagger(CBETaggerProvider provider, IWpfTextView textView, ITextBuffer sourceBuffer, ITextStructureNavigator textStructureNavigator, ITagAggregator<IClassificationTag> aggregator)
+        internal CBETagger(CBETaggerProvider provider, IWpfTextView textView, ITextBuffer sourceBuffer, ITextStructureNavigator textStructureNavigator, ITextSearchService textSearchService)
         {
             _synclock = new object();
             Provider = provider;
@@ -53,7 +53,7 @@ namespace CodeBlockEndTag
             TextStructureNavigator = textStructureNavigator;
             TextView = textView;
             SourceBuffer = sourceBuffer;
-            ClassificationTagAggregator = aggregator;
+            TextSearchService = textSearchService;
             Snapshot = sourceBuffer.CurrentSnapshot;
 
             CancellationSource = new CancellationTokenSource();
@@ -258,72 +258,53 @@ namespace CodeBlockEndTag
 
                 List<CBRegion> newRegions = new List<CBRegion>();
 
-                lock (_synclock)
+                // Find all opening bracets
+                FindData findData = new FindData("{", newSnapshot);
+                var cbStartSpans = TextSearchService.FindAll(findData);
+
+                string headerText = null;
+                int headerStart;
+                int innerStart;
+                SnapshotSpan innerSpan;
+                SnapshotSpan enclosingSpan;
+
+                // Find headers / conditions to codeblocks
+                foreach (SnapshotSpan cbStartSpan in cbStartSpans)
                 {
-                    // Get Roslyn classification spans
-                    IEnumerable<IMappingTagSpan<IClassificationTag>> classifications = ClassificationTagAggregator.GetTags(snapshotSpan);
                     if (cancelToken.IsCancellationRequested) return;
 
-                    string classificationText = string.Empty;
-                    int innerStart;
-                    int headerStart;
-                    SnapshotSpan innerSpan;
-                    SnapshotSpan enclosingSpan;
-                    string headerText = null;
+                    // Try finding header in enclosing span
+                    headerStart = -1;
+                    innerStart = cbStartSpan.Start + 1;
+                    innerSpan = new SnapshotSpan(newSnapshot, innerStart, 1);
+                    enclosingSpan = TextStructureNavigator.GetSpanOfEnclosing(innerSpan);
 
-                    foreach (IMappingTagSpan<IClassificationTag> classification in classifications)
+                    if (cancelToken.IsCancellationRequested) return;
+                    if (enclosingSpan.Start < cbStartSpan.Start)
+                    {
+                        // enclosing span contains header
+                        headerText = newSnapshot.GetText(enclosingSpan.Start, cbStartSpan.Start - enclosingSpan.Start);
+                        headerStart = enclosingSpan.Start;
+                    }
+                    else
+                    {
+                        headerText = GetSpanHeadline(enclosingSpan, newSnapshot, cancelToken, enclosingSpan.Start, out headerStart);
+                    }
+                    if (cancelToken.IsCancellationRequested) return;
+
+                    // Trim header
+                    if (headerText != null && headerText.Length > 0)
+                    {
+                        headerText = headerText.Trim().Replace(Environment.NewLine, "");
+                        // Todo: remove [Guid]
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(headerText) && !headerText.Contains("{"))
                     {
                         if (cancelToken.IsCancellationRequested) return;
-                        // is classified as punctuation
-                        if (classification.Tag.ClassificationType.Classification.ToLower().Contains("punctuation"))
-                        {
-                            var spans = classification.Span.GetSpans(SourceBuffer);
-                            if (spans.Count > 0)
-                            {
-                                if (cancelToken.IsCancellationRequested) return;
-                                // is opening bracet '{'
-                                var punctuationSpan = spans.First();
-                                classificationText = punctuationSpan.GetText();
-                                if ((innerStart = classificationText.IndexOf('{')) >= 0)
-                                {
-                                    if (cancelToken.IsCancellationRequested) return;
-                                    headerStart = -1;
-                                    // Get the enclosing span
-                                    innerStart += punctuationSpan.Start + 1;
-                                    innerSpan = new SnapshotSpan(newSnapshot, innerStart, 1);
-                                    enclosingSpan = TextStructureNavigator.GetSpanOfEnclosing(innerSpan);
 
-                                    // Get the header text
-                                    if (enclosingSpan.Start < punctuationSpan.Start)
-                                    {
-                                        // enclosing span contains header
-                                        headerText = newSnapshot.GetText(enclosingSpan.Start, punctuationSpan.Start - enclosingSpan.Start);
-                                    }
-                                    else
-                                    {
-                                        headerText = GetSpanHeadline(enclosingSpan, newSnapshot, cancelToken, enclosingSpan.Start, out headerStart);
-                                    }
-                                    if (cancelToken.IsCancellationRequested) return;
-                                    if (headerText != null && headerText.Length > 0)
-                                        headerText = headerText.Trim();
-
-                                    if (!string.IsNullOrWhiteSpace(headerText) && !headerText.Contains("{"))
-                                    {
-                                        // Add to list if header text found
-                                        if (headerStart < 0)
-                                        {
-                                            headerStart = enclosingSpan.Start;
-                                        }
-
-                                        SnapshotSpan headerSpan = new SnapshotSpan(newSnapshot, headerStart, headerText.Length);
-                                        IList<IMappingTagSpan<IClassificationTag>> headerClassifications = ClassificationTagAggregator.GetTags(headerSpan).ToList();
-                                        if (cancelToken.IsCancellationRequested) return;
-                                        var iconMoniker = IconMonikerSelector.SelectMoniker(headerClassifications, TextStructureNavigator, SourceBuffer);
-                                        newRegions.Add(new CBRegion(headerText, new Span(headerStart, enclosingSpan.Span.End - headerStart), iconMoniker));
-                                    }
-                                }
-                            }
-                        }
+                        var iconMoniker = Microsoft.VisualStudio.Imaging.KnownMonikers.QuestionMark; //IconMonikerSelector.SelectMoniker(headerClassifications, TextStructureNavigator, SourceBuffer);
+                        newRegions.Add(new CBRegion(headerText, new Span(headerStart, enclosingSpan.Span.End - headerStart), iconMoniker));
                     }
                 }
 
@@ -340,68 +321,45 @@ namespace CodeBlockEndTag
             headerStart = -1;
             SnapshotSpan currentSpan = span;
             bool first = true;
-            bool found = false;
+            Span headerSpan, headerSpan2;
+            string headerText = null, headerText2 = null;
+
             while ((currentSpan = first ? currentSpan :
                 TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != null)
             {
                 first = false;
                 if (cancelToken.IsCancellationRequested) return string.Empty;
-                IList<IMappingTagSpan<IClassificationTag>> classifications = ClassificationTagAggregator.GetTags(currentSpan).ToList();
-                if (classifications.Any())
+
+                // Get text of currentSpan
+                headerStart = currentSpan.Start;
+                headerSpan = new Span(headerStart, Math.Min(maxEnd, currentSpan.Span.End) - headerStart);
+                if (headerSpan.Length == 0) continue;
+                headerText = textSnapshot.GetText(headerSpan);
+                if (cancelToken.IsCancellationRequested) return string.Empty;
+
+                // Found header if it begins with a letter or contains a lambda
+                if (headerText.Length > 0 && (char.IsLetter(headerText[0]) || headerText.Contains("=>")))
                 {
-                    // Accept spans that don't start with punctuation (no braces, commas, points, ...)
-                    found = !classifications.First().Tag.ClassificationType.Classification.ToLower().Contains("punctuation");
-
-                    if (!found)
+                    // Recognize "else if" too
+                    if (headerText.StartsWith("if"))
                     {
-                        // Accept lambdas
-                        foreach(var classification in classifications)
-                        {
-                            if (cancelToken.IsCancellationRequested) return string.Empty;
-                            if (classification.Tag.ClassificationType.Classification.ToLower().Contains("operator"))
-                            {
-                                var spans = classification.Span.GetSpans(SourceBuffer);
-                                if (spans.Any())
-                                {
-                                    var operatorSpan = spans.First();
-                                    if (operatorSpan.Start < maxEnd && textSnapshot.GetText(operatorSpan).Contains("=>"))
-                                    {
-                                        found = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (found)
-                    {
-                        headerStart = currentSpan.Start;
-                        Span headerSpan = new Span(headerStart, Math.Min(maxEnd, currentSpan.Span.End) - headerStart);
-                        string headerText = textSnapshot.GetText(headerSpan);
+                        currentSpan = TextStructureNavigator.GetSpanOfEnclosing(currentSpan);
                         if (cancelToken.IsCancellationRequested) return string.Empty;
-                        // Recognize "else if" too
-                        if (headerText.StartsWith("if"))
+
+                        headerSpan2 = new Span(currentSpan.Start, Math.Min(maxEnd, currentSpan.Span.End) - currentSpan.Start);
+                        headerText2 = textSnapshot.GetText(headerSpan2);
+                        if (cancelToken.IsCancellationRequested) return string.Empty;
+
+                        if (headerText2.StartsWith("else"))
                         {
-                            currentSpan = TextStructureNavigator.GetSpanOfEnclosing(currentSpan);
-                            found = classifications.First().Tag.ClassificationType.Classification.ToLower().Contains("keyword");
-                            if (cancelToken.IsCancellationRequested) return string.Empty;
-                            if (found)
-                            {
-                                Span headerSpan2 = new Span(currentSpan.Start, Math.Min(maxEnd, currentSpan.Span.End) - currentSpan.Start);
-                                string headerText2 = textSnapshot.GetText(headerSpan2);
-                                if (cancelToken.IsCancellationRequested) return string.Empty;
-                                if (headerText2.StartsWith("else"))
-                                {
-                                    headerStart = currentSpan.Start;
-                                    headerText = headerText2;
-                                }
-                            }
+                            headerStart = currentSpan.Start;
+                            headerText = headerText2;
                         }
-                        return headerText;
                     }
+                    return headerText;
                 }
             }
+            headerStart = -1;
             return null;
         }
 
@@ -439,14 +397,14 @@ namespace CodeBlockEndTag
             Snapshot = newSnapshot;
             CurrentRegions = newRegions;
 
-            if (changeStart <= changeEnd)
-            {
-                TextView.VisualElement.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(new SnapshotSpan(Snapshot,
-                    Span.FromBounds(changeStart, changeEnd))));
-                }));
-            }
+            //if (changeStart <= changeEnd)
+            //{
+            //    TextView.VisualElement.Dispatcher.BeginInvoke(new Action(() =>
+            //    {
+            //        TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(new SnapshotSpan(Snapshot,
+            //        Span.FromBounds(changeStart, changeEnd))));
+            //    }));
+            //}
         }
 
         static SnapshotSpan AsSnapshotSpan(CBRegion region, ITextSnapshot snapshot)
@@ -479,12 +437,15 @@ namespace CodeBlockEndTag
             {
                 if (disposing)
                 {
+                    if (CancellationSource != null)
+                        CancellationSource.Cancel();
+
                     CBETagPackage.Instance.PackageOptionChanged -= OnPackageOptionChanged;
                     TextView.LayoutChanged -= OnTextViewLayoutChanged;
                     TextView = null;
                     SourceBuffer.Changed -= OnSourceBufferChanged;
                     SourceBuffer = null;
-                    ClassificationTagAggregator = null;
+                    TextSearchService = null;
                     Snapshot = null;
                 }
                 Disposed = true;
