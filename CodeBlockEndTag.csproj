@@ -51,6 +51,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="CBAdornmentData.cs" />
     <Compile Include="CBEOptionPage.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -66,9 +67,9 @@
     <Compile Include="CBETagger.cs" />
     <Compile Include="CBETaggerProvider.cs" />
     <Compile Include="CBETagPackage.cs" />
+    <Compile Include="CBRegionOld.cs" />
     <Compile Include="IconMonikerSelector.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="CBRegion.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Key.snk" />

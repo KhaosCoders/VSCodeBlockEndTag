@@ -45,9 +45,9 @@ namespace CodeBlockEndTag
 
 
 
-        internal CBRegion CBRegion { get; set; }
+        internal CBRegionOld CBRegion { get; set; }
 
-        internal delegate void TagClickHandler(CBRegion region);
+        internal delegate void TagClickHandler(CBRegionOld region);
         internal event TagClickHandler TagClicked;
 
         public CBETagControl()

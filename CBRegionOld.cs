@@ -4,7 +4,7 @@ using System.Windows;
 
 namespace CodeBlockEndTag
 {
-    internal class CBRegion
+    internal class CBRegionOld
     {
         public Span Span { get; set; }
 
@@ -16,7 +16,7 @@ namespace CodeBlockEndTag
 
         public ImageMoniker IconMoniker { get; set; }
 
-        public CBRegion(string header, Span span, ImageMoniker iconMoniker)
+        public CBRegionOld(string header, Span span, ImageMoniker iconMoniker)
         {
             Span = span;
             Header = header;

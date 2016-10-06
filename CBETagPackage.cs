@@ -33,7 +33,9 @@ namespace CodeBlockEndTag
     [InstalledProductRegistration("#110", "#112", "1.0", IconResourceID = 400)] // Info on this package for Help/About
     [Guid(CBETagPackage.PackageGuidString)]
     [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "pkgdef, VS and vsixmanifest are valid VS terms")]
+    // Add OptionPage to package
     [ProvideOptionPage(typeof(CBEOptionPage), "KC Extensions", "CodeBlock End Tagger", 113, 114, true)]
+    // Load package at every (including none) project type
     [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionHasMultipleProjects_string)]
@@ -47,9 +49,14 @@ namespace CodeBlockEndTag
 
 
         public delegate void PackageOptionChangedHandler(object sender);
+        /// <summary>
+        /// Event fired if any option in the OptionPage is changed
+        /// </summary>
         public event PackageOptionChangedHandler PackageOptionChanged;
 
-
+        /// <summary>
+        /// Gets the singelton instance of the class
+        /// </summary>
         public static CBETagPackage Instance
         {
             get
