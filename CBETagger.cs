@@ -7,8 +7,6 @@ using Microsoft.VisualStudio.Text.Tagging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Windows;
-using System.Threading;
 using System.Collections.ObjectModel;
 
 namespace CodeBlockEndTag
@@ -52,6 +50,11 @@ namespace CodeBlockEndTag
         readonly List<CBAdornmentData> _adornmentCache = new List<CBAdornmentData>();
 
         /// <summary>
+        /// This is the visible span of the textview
+        /// </summary>
+        Span? _VisibleSpan;
+
+        /// <summary>
         /// Is set, when the instance is disposed
         /// </summary>
         bool _Disposed { get; set; }
@@ -79,9 +82,8 @@ namespace CodeBlockEndTag
 
             // Hook up events
             _TextView.TextBuffer.Changed += TextBuffer_Changed;
-
-            //_TextView.LayoutChanged += OnTextViewLayoutChanged;
-            //CBETagPackage.Instance.PackageOptionChanged += OnPackageOptionChanged;
+            _TextView.LayoutChanged += OnTextViewLayoutChanged;
+            CBETagPackage.Instance.PackageOptionChanged += OnPackageOptionChanged;
         }
 
         #endregion
@@ -98,7 +100,32 @@ namespace CodeBlockEndTag
 
         void OnTextChanged(ITextChange textChange)
         {
+            // remove or update tags in adornment cache
+            List<CBAdornmentData> remove = new List<CBAdornmentData>();
+            foreach (var adornment in _adornmentCache)
+            {
+                if (!(adornment.HeaderStartPosition > textChange.OldEnd || adornment.EndPosition < textChange.OldPosition))
+                    remove.Add(adornment);
+                else if (adornment.HeaderStartPosition > textChange.OldEnd)
+                {
+                    adornment.HeaderStartPosition += textChange.Delta;
+                    adornment.StartPosition += textChange.Delta;
+                    adornment.EndPosition += textChange.Delta;
+                }
+            }
 
+            foreach (var adornment in remove)
+            {
+                RemoveFromCache(adornment);
+            }
+        }
+
+        private void RemoveFromCache(CBAdornmentData adornment)
+        {
+            var tag = adornment.Adornment as CBETagControl;
+            if (tag != null)
+                tag.TagClicked -= Adornment_TagClicked;
+            _adornmentCache.Remove(adornment);
         }
 
         #endregion
@@ -115,7 +142,6 @@ namespace CodeBlockEndTag
                 }
             }
         }
-
 
         event EventHandler<SnapshotSpanEventArgs> ITagger<IntraTextAdornmentTag>.TagsChanged
         {
@@ -147,7 +173,7 @@ namespace CodeBlockEndTag
             // vars used in loop
             SnapshotSpan cbSpan;
             CBAdornmentData cbAdornmentData;
-            UIElement tagElement;
+            CBETagControl tagElement;
             int cbStartPosition;
             int cbEndPosition;
             int cbHeaderPosition;
@@ -180,6 +206,10 @@ namespace CodeBlockEndTag
                     cbStartPosition = cbSpan.Start;
                 }
 
+                // Don't display tag for code blocks on same line
+                if (!snapshot.GetText(cbSpan).Contains('\n'))
+                    continue;
+
                 // getting the code blocks header 
                 cbHeaderPosition = -1;
                 if (snapshot[cbStartPosition] == '{')
@@ -190,44 +220,52 @@ namespace CodeBlockEndTag
                 else
                 {
                     // cbSpan does contain the header
-                    cbHeader = GetCodeBlockHeader(cbSpan, out cbHeaderPosition);
+                    cbHeader = GetCodeBlockHeader(cbSpan, out cbHeaderPosition, position);
                 }
 
                 // Trim header
                 if (cbHeader != null && cbHeader.Length > 0)
                 {
-                    cbHeader = cbHeader.Trim().Replace(Environment.NewLine, "");
-                    // Todo: remove [Guid]
+                    cbHeader = cbHeader.Trim()
+                        .Replace(Environment.NewLine, "")
+                        .Replace('\t', ' ');
                 }
+
+                // Skip tag if option "only when header not visible"
+                if (_VisibleSpan != null && !IsTagVisible(cbHeaderPosition, cbEndPosition, _VisibleSpan))
+                    continue;
 
                 var iconMoniker = Microsoft.VisualStudio.Imaging.KnownMonikers.QuestionMark;
                 if (!string.IsNullOrWhiteSpace(cbHeader) && !cbHeader.Contains("{"))
                 {
-                    //IconMonikerSelector.SelectMoniker(headerClassifications, TextStructureNavigator, SourceBuffer);
+                    iconMoniker = IconMonikerSelector.SelectMoniker(cbHeader);
                 }
 
-                // create new adornment
+                // use cache or create new tag
                 cbAdornmentData = _adornmentCache
-                                    .Where(o => 
-                                        o.StartPosition == cbStartPosition && 
+                                    .Where(o =>
+                                        o.StartPosition == cbStartPosition &&
                                         o.EndPosition == cbEndPosition)
                                     .FirstOrDefault();
-                // use cache or create new tag
-                if (cbAdornmentData.Adornment != null)
+                
+                if (cbAdornmentData?.Adornment != null)
                 {
-                    tagElement = cbAdornmentData.Adornment;
+                    tagElement = cbAdornmentData.Adornment as CBETagControl;
                 }
                 else
                 {
+                    // create new adornment
                     tagElement = new CBETagControl()
                     {
                         Text = cbHeader,
                         IconMoniker = iconMoniker,
-                        CBRegion = null,
                         DisplayMode = CBETagPackage.CBEDisplayMode
                     };
 
-                    cbAdornmentData = new CBAdornmentData(cbStartPosition, cbEndPosition, tagElement);
+                    tagElement.TagClicked += Adornment_TagClicked;
+
+                    cbAdornmentData = new CBAdornmentData(cbStartPosition, cbEndPosition, cbHeaderPosition, tagElement);
+                    tagElement.AdornmentData = cbAdornmentData;
                     _adornmentCache.Add(cbAdornmentData);
                 }
 
@@ -245,16 +283,17 @@ namespace CodeBlockEndTag
         /// Capture the header of a code block
         /// Returns the text and outputs the start position within the snapshot
         /// </summary>
-        string GetCodeBlockHeader(SnapshotSpan cbSpan, out int headerStart)
+        string GetCodeBlockHeader(SnapshotSpan cbSpan, out int headerStart, int maxEndPosition = 0)
         {
-            int maxEndPosition = cbSpan.Start;
+            if (maxEndPosition == 0)
+                maxEndPosition = cbSpan.Start;
             var snapshot = cbSpan.Snapshot;
             var currentSpan = cbSpan;
 
             // set end of header to first start of code block {
-            for (int i=cbSpan.Start; i<=cbSpan.End; i++)
+            for (int i = cbSpan.Start; i <= cbSpan.End; i++)
             {
-                if (snapshot[i]=='{')
+                if (snapshot[i] == '{')
                 {
                     maxEndPosition = i;
                     break;
@@ -263,9 +302,14 @@ namespace CodeBlockEndTag
 
             Span headerSpan, headerSpan2;
             string headerText, headerText2;
+            int loops = 0;
             // check all enclosing spans until the header is complete
             do
             {
+                // abort if in endless loop
+                if (loops++ > 10)
+                    break;
+
                 // get text of current span
                 headerStart = currentSpan.Start;
                 headerSpan = new Span(headerStart, Math.Min(maxEndPosition, currentSpan.Span.End) - headerStart);
@@ -274,33 +318,95 @@ namespace CodeBlockEndTag
                 headerText = snapshot.GetText(headerSpan);
 
                 // found header if it begins with a letter or contains a lambda
-                if (!string.IsNullOrWhiteSpace(headerText) 
-                    && (char.IsLetter(headerText[0]) || headerText.Contains("=>")))
+                if (!string.IsNullOrWhiteSpace(headerText))
+                //&& (char.IsLetter(headerText[0]) || headerText[0]=='[' || headerText.Contains("=>")))
                 {
                     // recognize "else if" too
-                    if(headerText.StartsWith("if") && ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != null))
+                    if (headerText.StartsWith("if") && ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != null))
                     {
                         // check what comes before the "if"
                         headerSpan2 = new Span(currentSpan.Start, Math.Min(maxEndPosition, currentSpan.Span.End) - currentSpan.Start);
                         headerText2 = snapshot.GetText(headerSpan2);
-                        if(headerText2.StartsWith("else"))
+                        if (headerText2.StartsWith("else"))
                         {
                             headerStart = headerSpan2.Start;
                             headerText = headerText2;
                         }
                     }
-
+                    else if (headerText.Contains('\r') || headerText.Contains('\n'))
+                    {
+                        // skip annotations
+                        headerText = headerText.Replace('\r', '\n').Replace("\n\n", "\n");
+                        string[] headerLines = headerText.Split('\n');
+                        bool annotaions = true;
+                        int openBracets = 0;
+                        headerText = string.Empty;
+                        foreach (var line in headerLines)
+                        {
+                            if (!string.IsNullOrWhiteSpace(line))
+                            {
+                                var trimmedline = line.Trim();
+                                if (annotaions && (trimmedline[0] == '[' || openBracets > 0))
+                                {
+                                    openBracets += trimmedline.Count(c => c == '[');
+                                    openBracets -= trimmedline.Count(c => c == ']');
+                                    continue;
+                                }
+                                annotaions = false;
+                                if (!string.IsNullOrWhiteSpace(headerText))
+                                    headerText += Environment.NewLine;
+                                headerText += trimmedline;
+                            }
+                        }
+                    }
                     return headerText;
                 }
 
                 // get next enclosing span of current span
             } while ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != null);
-            
+
             // No header found
             headerStart = -1;
             return null;
         }
 
+
+        #endregion
+
+        #region Tag Clicked Handler
+
+        /// <summary>
+        /// Handles the click event on a tag
+        /// </summary>
+        private void Adornment_TagClicked(CBAdornmentData adornment)
+        {
+            if (_TextView != null)
+            {
+                SnapshotPoint targetPoint = new SnapshotPoint(_TextView.TextBuffer.CurrentSnapshot, adornment.HeaderStartPosition);
+                _TextView.DisplayTextLineContainingBufferPosition(targetPoint, 30, ViewRelativePosition.Top);
+                _TextView.Caret.MoveTo(targetPoint);
+            }
+        }
+
+        #endregion
+
+        #region Options changed
+
+        /// <summary>
+        /// Handles the event when any package option is changed
+        /// </summary>
+        private void OnPackageOptionChanged(object sender)
+        {
+            InvalidateCache();
+        }
+
+        private void InvalidateCache()
+        {
+            _adornmentCache.ToList().ForEach(a => RemoveFromCache(a));
+            _changedEvent?.Invoke(this, new SnapshotSpanEventArgs(
+                new SnapshotSpan(_TextView.TextBuffer.CurrentSnapshot,
+                Span.FromBounds(0, _TextView.TextBuffer.CurrentSnapshot.Length))));
+        }
 
         #endregion
 
@@ -317,7 +423,7 @@ namespace CodeBlockEndTag
             if (disposing)
             {
                 CBETagPackage.Instance.PackageOptionChanged -= OnPackageOptionChanged;
-                //_TextView.LayoutChanged -= OnTextViewLayoutChanged;
+                _TextView.LayoutChanged -= OnTextViewLayoutChanged;
                 _TextView.TextBuffer.Changed -= TextBuffer_Changed;
             }
             _Disposed = true;
@@ -331,64 +437,29 @@ namespace CodeBlockEndTag
 
         #endregion
 
+        #region visibility of tags
 
-
-
-
-
-
-
-
-        #region TextView scrolling
-
-        /*
-        private void OnTextViewLayoutChanged(object sender, TextViewLayoutChangedEventArgs e)
+        /// <summary>
+        /// Checks if a tag's header is visible
+        /// </summary>
+        /// <param name="tagSpan">the span of the tag</param>
+        /// <param name="visibleSpan">the visible span in the textview</param>
+        /// <returns>true if the tag is visible (or if all tags are shown)</returns>
+        private bool IsTagVisible(int start, int end, Span? visibleSpan)
         {
-            if (CBETagPackage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always)
-                return;
-
-            Span? newVisibleSpan = GetNewVisibleSpan(sender as ITextView);
-            if (newVisibleSpan != null && newVisibleSpan.HasValue &&
-                (LastVisibleSpan == null || !LastVisibleSpan.HasValue ||
-                LastVisibleSpan.Value.Start != newVisibleSpan.Value.Start ||
-                LastVisibleSpan.Value.End != newVisibleSpan.Value.End))
-            {
-                // Reparse if nothing was parsed before
-                if (CurrentRegions.Count == 0 && e.NewSnapshot.Length > 0)
-                    ReParseSnapshot();
-
-                UpdateCBETagVisibility(newVisibleSpan.Value);
-            }
+            return (CBETagPackage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always ||
+                visibleSpan == null || !visibleSpan.HasValue ||
+                    (start < visibleSpan.Value.Start
+                    && end >= visibleSpan.Value.Start
+                    && end <= visibleSpan.Value.End));
         }
 
-        private void UpdateCBETagVisibility(Span newVisibleSpan)
+        /// <summary>
+        /// Returns the visible span for the given textview
+        /// </summary>
+        private Span? GetVisibleSpan(ITextView textView)
         {
-            // Recalculate visible tags
-            bool displayTag;
-            bool callChanged = false;
-            foreach (CBRegion region in CurrentRegions)
-            {
-                displayTag = IsTagVisible(region.Span, newVisibleSpan);
-                // If one tag changed, call TagsChanged event
-                if (displayTag != region.IsDisplayed)
-                {
-                    callChanged = true;
-                    break;
-                }
-            }
-
-            LastVisibleSpan = newVisibleSpan;
-            // Call tags changed if tags visibility changed
-            if (callChanged)
-                TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(new SnapshotSpan(Snapshot, newVisibleSpan)));
-        }
-
-
-        private Span? GetNewVisibleSpan(ITextView textView)
-        {
-            if (textView == null) return null;
-
-            if (textView.TextViewLines.Count > 2)
+            if (textView?.TextViewLines != null && textView.TextViewLines.Count > 2)
             {
                 // Index 0 not yet visible
                 var firstVisibleLine = textView.TextViewLines[1];
@@ -397,169 +468,25 @@ namespace CodeBlockEndTag
 
                 return new Span(firstVisibleLine.Start, lastVisibleLine.End - firstVisibleLine.Start);
             }
-
             return null;
         }
 
-        private bool IsTagVisible(Span tagSpan, Span? visibleSpan)
-        {
-            return (CBETagPackage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always ||
-                visibleSpan == null || !visibleSpan.HasValue ||
-                    (tagSpan.Start < visibleSpan.Value.Start
-                    && tagSpan.End >= visibleSpan.Value.Start
-                    && tagSpan.End <= visibleSpan.Value.End));
-        }
-        */
 
         #endregion
 
-        #region ITagger<IntraTextAdornmentTag>
+        #region TextView scrolling
 
-
-        /*
-    public IEnumerable<ITagSpan<IntraTextAdornmentTag>> GetTags(NormalizedSnapshotSpanCollection spans)
-    {
-        yield break;
-
-        if (!CBETagPackage.CBETaggerEnabled)
-            yield break;
-
-        if (spans.Count == 0 || CurrentRegions.Count == 0)
-            yield break;
-
-        List<CBRegion> currentRegions = CurrentRegions;
-
-        foreach (var region in currentRegions)
+        private void OnTextViewLayoutChanged(object sender, TextViewLayoutChangedEventArgs e)
         {
-            if (IsTagVisible(region.Span, LastVisibleSpan))
+            // get new visible span
+            var visibleSpan = GetVisibleSpan(_TextView);
+            if (_VisibleSpan != visibleSpan)
             {
-                // Mark region as displayed
-                region.IsDisplayed = true;
-                // Create adornment
-                if (region.Adornment == null)
-                {
-                    region.Adornment = new CBETagControl()
-                    {
-                        Text = region.Header,
-                        IconMoniker = region.IconMoniker,
-                        CBRegion = region,
-                        DisplayMode = CBETagPackage.CBEDisplayMode
-                    };
+                _VisibleSpan = visibleSpan;
 
-                    region.Adornment.TagClicked += Adornment_TagClicked;
-
-                    region.Adornment.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-                }
-                else
-                {
-                    if (region.Adornment.Visibility == Visibility.Collapsed)
-                        region.Adornment.Visibility = Visibility.Visible;
-
-                    if (region.Adornment.Text != region.Header)
-                        region.Adornment.Text = region.Header;
-                    if (region.Adornment.IconMoniker.Guid != region.IconMoniker.Guid ||
-                            region.Adornment.IconMoniker.Id != region.IconMoniker.Id)
-                        region.Adornment.IconMoniker = region.IconMoniker;
-                    if (region.Adornment.DisplayMode != CBETagPackage.CBEDisplayMode)
-                        region.Adornment.DisplayMode = CBETagPackage.CBEDisplayMode;
-
-                }
-
-                // Create tag
-                int position = region.Span.End;
-                var adornemntTag = new IntraTextAdornmentTag(region.Adornment, null);
-
-                var adornmentSpan = new SnapshotSpan(_SourceBuffer.CurrentSnapshot, position, 0);
-                yield return new TagSpan<IntraTextAdornmentTag>(adornmentSpan, adornemntTag);
+                // refresh tags
+                InvalidateCache();
             }
-            else
-            {
-                // Mark region as not displayed
-                region.IsDisplayed = false;
-                if (region.Adornment != null && region.Adornment.Visibility == Visibility.Visible)
-                {
-                    region.Adornment.Visibility = Visibility.Collapsed;
-                }
-            }
-        }
-    }
-
-        */
-        /*
-        private void Adornment_TagClicked(CBRegion region)
-        {
-            if (_TextView != null)
-            {
-                SnapshotPoint targetPoint = new SnapshotPoint(_SourceBuffer.CurrentSnapshot, region.Span.Start);
-                _TextView.DisplayTextLineContainingBufferPosition(targetPoint, 0, ViewRelativePosition.Top);
-                _TextView.Caret.MoveTo(targetPoint);
-            }
-        }
-        */
-
-        #endregion
-
-        #region Parsing
-
-        /*      
-
-        public void UpdateCBERegions(ITextSnapshot newSnapshot, List<CBRegion> newRegions)
-        {
-            // determine the changed span, and send a changed event with the new spans
-            List<Span> oldSpans =
-                new List<Span>(CurrentRegions.Select(r => AsSnapshotSpan(r, Snapshot)
-                    .TranslateTo(newSnapshot, SpanTrackingMode.EdgeExclusive).Span));
-            List<Span> newSpans =
-                    new List<Span>(newRegions.Select(r => AsSnapshotSpan(r, newSnapshot).Span));
-            NormalizedSpanCollection oldSpanCollection = new NormalizedSpanCollection(oldSpans);
-            NormalizedSpanCollection newSpanCollection = new NormalizedSpanCollection(newSpans);
-
-            // the changed regions are regions that appear in one set or the other, but not both.
-            NormalizedSpanCollection removed =
-                NormalizedSpanCollection.Difference(oldSpanCollection, newSpanCollection);
-
-            // Calculate changed span
-            int changeStart = int.MaxValue;
-            int changeEnd = -1;
-
-            if (removed.Count > 0)
-            {
-                changeStart = removed[0].Start;
-                changeEnd = removed[removed.Count - 1].End;
-            }
-
-            if (newSpans.Count > 0)
-            {
-                changeStart = Math.Min(changeStart, newSpans[0].Start);
-                changeEnd = Math.Max(changeEnd, newSpans[newSpans.Count - 1].End);
-            }
-
-            Snapshot = newSnapshot;
-            CurrentRegions = newRegions;
-
-            //if (changeStart <= changeEnd)
-            //{
-            //    TextView.VisualElement.Dispatcher.BeginInvoke(new Action(() =>
-            //    {
-            //        TagsChanged?.Invoke(this, new SnapshotSpanEventArgs(new SnapshotSpan(Snapshot,
-            //        Span.FromBounds(changeStart, changeEnd))));
-            //    }));
-            //}
-        }
-
-        static SnapshotSpan AsSnapshotSpan(CBRegion region, ITextSnapshot snapshot)
-        {
-            return new SnapshotSpan(snapshot, region.Span);
-        }
-        */
-
-        #endregion
-
-        #region Options changed
-
-        private void OnPackageOptionChanged(object sender)
-        {
-            //_changedEvent?.Invoke(this, new SnapshotSpanEventArgs(new SnapshotSpan(_SourceBuffer.CurrentSnapshot, Span.FromBounds(0, 1))));
         }
 
         #endregion

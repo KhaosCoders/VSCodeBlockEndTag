@@ -2,18 +2,20 @@
 
 namespace CodeBlockEndTag
 {
-    struct CBAdornmentData
+    internal class CBAdornmentData
     {
-        internal readonly int StartPosition;
-        internal readonly int EndPosition;
+        internal int StartPosition;
+        internal int EndPosition;
+        internal int HeaderStartPosition;
 
         internal readonly UIElement Adornment;
 
 
-        internal CBAdornmentData(int start, int end, UIElement adornment)
+        internal CBAdornmentData(int start, int end, int headerStart, UIElement adornment)
         {
             StartPosition = start;
             EndPosition = end;
+            HeaderStartPosition = headerStart;
             Adornment = adornment;
         }
 

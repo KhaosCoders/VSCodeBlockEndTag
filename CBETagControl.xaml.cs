@@ -45,9 +45,9 @@ namespace CodeBlockEndTag
 
 
 
-        internal CBRegionOld CBRegion { get; set; }
+        internal CBAdornmentData AdornmentData { get; set; }
 
-        internal delegate void TagClickHandler(CBRegionOld region);
+        internal delegate void TagClickHandler(CBAdornmentData adornment);
         internal event TagClickHandler TagClicked;
 
         public CBETagControl()
@@ -60,9 +60,9 @@ namespace CodeBlockEndTag
         {
             if (e.LeftButton == MouseButtonState.Pressed &&
                 e.ClickCount == CBETagPackage.CBEClickCount &&
-                CBRegion != null)
+                AdornmentData != null)
             {
-                TagClicked?.Invoke(CBRegion);
+                TagClicked?.Invoke(AdornmentData);
             }
         }
     }

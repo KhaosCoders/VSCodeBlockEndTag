@@ -3,16 +3,14 @@
 // http://glyphlist.azurewebsites.net/knownmonikers/
 //
 
-using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Imaging.Interop;
-using Microsoft.VisualStudio.Text;
-using Microsoft.VisualStudio.Text.Operations;
-using Microsoft.VisualStudio.Text.Tagging;
+using System.Collections.Generic;
 
 namespace CodeBlockEndTag
 {
+
     internal sealed class IconMonikerSelector
     {
         private const string ModifierPublic = "public";
@@ -20,444 +18,176 @@ namespace CodeBlockEndTag
         private const string ModifierProtected = "protected";
         private const string ModifierInternal = "internal";
         private const string ModifierSealed = "sealed";
+        private const string ModifierPartial = "partial";
+        private const string ModifierStatic = "static";
 
         private static readonly string[] Modifiers = new string[]
         {
-            ModifierPublic, ModifierPrivate, ModifierProtected, ModifierInternal
+            ModifierPublic, ModifierPrivate, ModifierProtected, ModifierInternal,
+            ModifierSealed, ModifierPartial, ModifierStatic
         };
 
-        private const string ClassificationKeyword = "keyword";
-        private const string ClassificationIdentifier = "identifier";
-        private const string ClassificationPunctuation = "punctuation";
-        private const string ClassificationOperator = "operator";
+        private delegate ImageMoniker IconSelector(string keyword, string modifier);
+        private static Dictionary<string, IconSelector> iconSelectors = new Dictionary<string, IconSelector>();
 
-
-
-        public static ImageMoniker SelectMoniker(IList<IMappingTagSpan<IClassificationTag>> classifications, ITextStructureNavigator textStructureNavigator, ITextBuffer buffer)
+        public static ImageMoniker SelectMoniker(string header)
         {
-            ImageMoniker currentIcon = KnownMonikers.QuestionMark;
+            ImageMoniker icon = KnownMonikers.QuestionMark;
+            if (string.IsNullOrWhiteSpace(header)) return icon;
 
-            SnapshotSpan firstSpan = classifications.First().Span.GetSpans(buffer).First();
+            // split words of header
+            string[] words = header.Split(' ');
+            int modifierCount = 0;
+            if (words.Length == 0) return icon;
 
-            var classify = classifications.Select(c =>
-                            new Classify()
-                            {
-                                Classification = c.Tag.ClassificationType.Classification.ToLower(),
-                                Word = c.Span.GetSpans(buffer).First().GetText()
-                            });
+            // find first visibility modifier
+            string modifier = GetModifier(words, out modifierCount);
+            int keywordIndex = modifierCount;
+            if (words.Length <= keywordIndex) return icon;
 
-            string modifier = classify
-                .Where(c => c.Classification.Contains(ClassificationKeyword))
-                .Select(c => c.Word)
-                .Intersect(Modifiers).FirstOrDefault();
-            
-            if (IsNamespace(classify))
+            // take first keyword
+            string keyword = words[keywordIndex].ToLower();
+            if (keyword.Contains('('))
             {
-                currentIcon = KnownMonikers.Namespace;
+                keyword = keyword.Substring(0, keyword.IndexOf('('));
             }
-            else if (IsClass(classify))
+            if (keyword.Contains('['))
             {
-                if (string.IsNullOrWhiteSpace(modifier))
-                    modifier = GetModifier(textStructureNavigator, firstSpan);
+                keyword = keyword.Substring(0, keyword.IndexOf('['));
+            }
+
+            // setup keyword icons
+            if (iconSelectors.Count == 0)
+                InitIconSelectors();
+
+            // get icon by keyword
+            if (iconSelectors.ContainsKey(keyword))
+            {
+                icon = iconSelectors[keyword](keyword, modifier);
+            }
+
+            // icon for lambda
+            else if (header.Contains("=>"))
+            {
+                icon = KnownMonikers.DelegatePublic;
+            }
+
+            // icon for method/ctor
+            else if (words.Length - modifierCount >= 1 && header.Contains('(') && header.Contains(')'))
+            {
                 switch (modifier)
                 {
-                    case ModifierPublic: currentIcon = KnownMonikers.ClassPublic; break;
-                    case ModifierPrivate: currentIcon = KnownMonikers.ClassPrivate; break;
-                    case ModifierProtected: currentIcon = KnownMonikers.ClassProtected; break;
-                    case ModifierInternal: currentIcon = KnownMonikers.ClassInternal; break;
+                    case ModifierPublic: icon = KnownMonikers.MethodPublic; break;
+                    case ModifierProtected: icon = KnownMonikers.MethodProtected; break;
+                    case ModifierInternal: icon = KnownMonikers.MethodInternal; break;
+                    default: icon = KnownMonikers.MethodPrivate; break;
                 }
             }
-            else if (IsStruct(classify))
+
+            // icon for property
+            else if (words.Length - modifierCount == 2)
             {
-                if (string.IsNullOrWhiteSpace(modifier)) 
-                modifier = GetModifier(textStructureNavigator, firstSpan);
                 switch (modifier)
                 {
-                    case ModifierPublic: currentIcon = KnownMonikers.StructurePublic; break;
-                    case ModifierPrivate: currentIcon = KnownMonikers.StructurePrivate; break;
-                    case ModifierProtected: currentIcon = KnownMonikers.StructureProtected; break;
-                    case ModifierInternal: currentIcon = KnownMonikers.StructureInternal; break;
+                    case ModifierPublic: icon = KnownMonikers.PropertyPublic; break;
+                    case ModifierProtected: icon = KnownMonikers.PropertyProtected; break;
+                    case ModifierInternal: icon = KnownMonikers.PropertyInternal; break;
+                    default: icon = KnownMonikers.PropertyPrivate; break;
                 }
             }
-            else if (IsEnum(classify))
+
+            return icon;
+        }
+
+        private static void InitIconSelectors()
+        {
+            iconSelectors.Add("namespace", new IconSelector((keyword, modifier) => KnownMonikers.Namespace));
+            iconSelectors.Add("class", new IconSelector((keyword, modifier) =>
             {
-                if (string.IsNullOrWhiteSpace(modifier))
-                    modifier = GetModifier(textStructureNavigator, firstSpan);
                 switch (modifier)
                 {
-                    case ModifierPublic: currentIcon = KnownMonikers.EnumerationPublic; break;
-                    case ModifierPrivate: currentIcon = KnownMonikers.EnumerationPrivate; break;
-                    case ModifierProtected: currentIcon = KnownMonikers.EnumerationProtected; break;
-                    case ModifierInternal: currentIcon = KnownMonikers.EnumerationInternal; break;
+                    case ModifierPublic: return KnownMonikers.ClassPublic;
+                    case ModifierPrivate: return KnownMonikers.ClassPrivate;
+                    case ModifierProtected: return KnownMonikers.ClassProtected;
+                    default: return KnownMonikers.ClassInternal;
                 }
-            }
-            else if (IsInterface(classify))
+            }));
+            iconSelectors.Add("struct", new IconSelector((keyword, modifier) =>
             {
-                if (string.IsNullOrWhiteSpace(modifier))
-                    modifier = GetModifier(textStructureNavigator, firstSpan);
                 switch (modifier)
                 {
-                    case ModifierPublic: currentIcon = KnownMonikers.InterfacePublic; break;
-                    case ModifierPrivate: currentIcon = KnownMonikers.InterfacePrivate; break;
-                    case ModifierProtected: currentIcon = KnownMonikers.InterfaceProtected; break;
-                    case ModifierInternal: currentIcon = KnownMonikers.InterfaceInternal; break;
+                    case ModifierPublic: return KnownMonikers.StructurePublic;
+                    case ModifierPrivate: return KnownMonikers.StructurePrivate;
+                    case ModifierProtected: return KnownMonikers.StructureProtected;
+                    default: return KnownMonikers.StructureInternal;
                 }
-            }
-            else if (IsEvent(classify))
+            }));
+            iconSelectors.Add("enum", new IconSelector((keyword, modifier) =>
             {
-                if (string.IsNullOrWhiteSpace(modifier))
-                    modifier = ModifierPrivate;
                 switch (modifier)
                 {
-                    case ModifierPublic: currentIcon = KnownMonikers.EventPublic; break;
-                    case ModifierPrivate: currentIcon = KnownMonikers.EventPrivate; break;
-                    case ModifierProtected: currentIcon = KnownMonikers.EventProtected; break;
-                    case ModifierInternal: currentIcon = KnownMonikers.EventInternal; break;
+                    case ModifierPublic: return KnownMonikers.EnumerationPublic;
+                    case ModifierPrivate: return KnownMonikers.EnumerationPrivate;
+                    case ModifierProtected: return KnownMonikers.EnumerationProtected;
+                    default: return KnownMonikers.EnumerationInternal;
                 }
-            }
-            else if (IsIf(classify))
+            }));
+            iconSelectors.Add("interface", new IconSelector((keyword, modifier) =>
             {
-                currentIcon = KnownMonikers.If;
-            }
-            else if (IsElse(classify))
-            {
-                currentIcon = KnownMonikers.If;
-            }
-            else if (IsWhile(classify))
-            {
-                currentIcon = KnownMonikers.While;
-            }
-            else if (IsFor(classify))
-            {
-                currentIcon = KnownMonikers.ForEachLoop;
-            }
-            else if (IsTypedef(classify))
-            {
-                currentIcon = KnownMonikers.TypeDefinition;
-            }
-            else if (IsNewInstanceCreation(classify))
-            {
-                currentIcon = KnownMonikers.NewItem;
-            }
-            else if (IsSwitch(classify))
-            {
-                currentIcon = KnownMonikers.FlowSwitch;
-            }
-            else if (IsTry(classify))
-            {
-                currentIcon = KnownMonikers.TryCatch;
-            }
-            else if (IsCatch(classify))
-            {
-                currentIcon = KnownMonikers.TryCatch;
-            }
-            else if (IsFinally(classify))
-            {
-                currentIcon = KnownMonikers.FinalState;
-            }
-            else if (IsUnsafe(classify))
-            {
-                currentIcon = KnownMonikers.HotSpot;
-            }
-            else if (IsUsing(classify))
-            {
-                currentIcon = KnownMonikers.RectangleSelection;
-            }
-            else if (IsLock(classify))
-            {
-                currentIcon = KnownMonikers.Lock;
-            }
-            else if (IsAddEventHandler(classify, textStructureNavigator, firstSpan))
-            {
-                currentIcon = KnownMonikers.AddEvent;
-            }
-            else if (IsRemoveEventHandler(classify, textStructureNavigator, firstSpan))
-            {
-                currentIcon = KnownMonikers.EventMissing;
-            }
-            else if (IsPropertyGetter(classify, textStructureNavigator, firstSpan))
-            {
-                currentIcon = KnownMonikers.ReturnParameter;
-            }
-            else if (IsPropertySetter(classify, textStructureNavigator, firstSpan))
-            {
-                currentIcon = KnownMonikers.InsertParameter;
-            }
-            else if (IsLambda(classify))
-            {
-                currentIcon = KnownMonikers.DelegatePublic;
-            }
-            else if (IsMethod(classify))
-            {
-                if (string.IsNullOrWhiteSpace(modifier))
-                    modifier = ModifierPrivate;
                 switch (modifier)
                 {
-                    case ModifierPublic: currentIcon = KnownMonikers.MethodPublic; break;
-                    case ModifierPrivate: currentIcon = KnownMonikers.MethodPrivate; break;
-                    case ModifierProtected: currentIcon = KnownMonikers.MethodProtected; break;
-                    case ModifierInternal: currentIcon = KnownMonikers.MethodInternal; break;
+                    case ModifierPublic: return KnownMonikers.InterfacePublic;
+                    case ModifierPrivate: return KnownMonikers.InterfacePrivate;
+                    case ModifierProtected: return KnownMonikers.InterfaceProtected;
+                    default: return KnownMonikers.InterfaceInternal;
                 }
-            }
-            else if (IsProperty(classify))
+            }));
+            iconSelectors.Add("event", new IconSelector((keyword, modifier) =>
             {
-                if (string.IsNullOrWhiteSpace(modifier))
-                    modifier = ModifierPrivate;
                 switch (modifier)
                 {
-                    case ModifierPublic: currentIcon = KnownMonikers.PropertyPublic; break;
-                    case ModifierPrivate: currentIcon = KnownMonikers.PropertyPrivate; break;
-                    case ModifierProtected: currentIcon = KnownMonikers.PropertyProtected; break;
-                    case ModifierInternal: currentIcon = KnownMonikers.PropertyInternal; break;
+                    case ModifierPublic: return KnownMonikers.EventPublic;
+                    case ModifierInternal: return KnownMonikers.EventInternal;
+                    case ModifierProtected: return KnownMonikers.EventProtected;
+                    default: return KnownMonikers.EventPrivate;
                 }
-            }
-
-            
-            return currentIcon;
+            }));
+            iconSelectors.Add("if", new IconSelector((keyword, modifier) => KnownMonikers.If));
+            iconSelectors.Add("else", new IconSelector((keyword, modifier) => KnownMonikers.If));
+            iconSelectors.Add("while", new IconSelector((keyword, modifier) => KnownMonikers.While));
+            iconSelectors.Add("for", new IconSelector((keyword, modifier) => KnownMonikers.ForEachLoop));
+            iconSelectors.Add("typedef", new IconSelector((keyword, modifier) => KnownMonikers.TypeDefinition));
+            iconSelectors.Add("new", new IconSelector((keyword, modifier) => KnownMonikers.NewItem));
+            iconSelectors.Add("switch", new IconSelector((keyword, modifier) => KnownMonikers.FlowSwitch));
+            iconSelectors.Add("try", new IconSelector((keyword, modifier) => KnownMonikers.TryCatch));
+            iconSelectors.Add("catch", new IconSelector((keyword, modifier) => KnownMonikers.TryCatch));
+            iconSelectors.Add("finally", new IconSelector((keyword, modifier) => KnownMonikers.FinalState));
+            iconSelectors.Add("unsafe", new IconSelector((keyword, modifier) => KnownMonikers.HotSpot));
+            iconSelectors.Add("using", new IconSelector((keyword, modifier) => KnownMonikers.RectangleSelection));
+            iconSelectors.Add("lock", new IconSelector((keyword, modifier) => KnownMonikers.Lock));
+            iconSelectors.Add("add", new IconSelector((keyword, modifier) => KnownMonikers.AddEvent));
+            iconSelectors.Add("remove", new IconSelector((keyword, modifier) => KnownMonikers.EventMissing));
+            iconSelectors.Add("get", new IconSelector((keyword, modifier) => KnownMonikers.ReturnParameter));
+            iconSelectors.Add("set", new IconSelector((keyword, modifier) => KnownMonikers.InsertParameter));
         }
 
-        private static bool IsNamespace(IEnumerable<Classify> classifications)
+        private static string GetModifier(string[] words, out int modifierCount)
         {
-            return classifications.Where(c => 
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("namespace")).Any();
-        }
-
-        private static bool IsClass(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("class")).Any();
-        }
-
-        private static bool IsIf(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("if")).Any();
-        }
-        private static bool IsElse(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("else")).Any();
-        }
-
-        private static bool IsWhile(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && (c.Word.Equals("while") || c.Word.Equals("do"))).Any();
-        }
-
-        private static bool IsFor(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && (c.Word.Equals("for") || c.Word.Equals("foreach"))).Any();
-        }
-
-        private static bool IsStruct(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("struct")).Any();
-        }
-
-        private static bool IsEnum(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("enum")).Any();
-        }
-
-        private static bool IsInterface(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("interface")).Any();
-        }
-
-        private static bool IsEvent(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("event")).Any();
-        }
-
-        private static bool IsTypedef(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("typedef")).Any();
-        }
-
-        private static bool IsNewInstanceCreation(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("new")).Any();
-        }
-
-        private static bool IsSwitch(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("switch")).Any();
-        }
-
-        private static bool IsTry(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("try")).Any();
-        }
-
-        private static bool IsCatch(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("catch")).Any();
-        }
-
-        private static bool IsFinally(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("finally")).Any();
-        }
-
-        private static bool IsUnsafe(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("unsafe")).Any();
-        }
-
-        private static bool IsUsing(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("using")).Any();
-        }
-
-        private static bool IsLock(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("lock")).Any();
-        }
-
-        private static bool IsLambda(IEnumerable<Classify> classifications)
-        {
-            return classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationOperator)
-                                    && c.Word.Equals("=>")).Any();
-        }
-
-        private static bool IsMethod(IEnumerable<Classify> classifications)
-        {
-            bool wasId = false;
-            foreach (var classify in classifications)
+            string modifier = string.Empty;
+            modifierCount = 0;
+            foreach (string word in words)
             {
-                if (classify.Classification.Contains(ClassificationIdentifier))
+                if (Modifiers.Contains(word))
                 {
-                    wasId = true;
+                    modifierCount++;
+                    if (string.IsNullOrWhiteSpace(modifier))
+                        modifier = word;
+                    continue;
                 }
-                else if (wasId
-                    && classify.Classification.Contains(ClassificationPunctuation)
-                    && classify.Word.StartsWith("("))
-                {
-                    return true;
-                }
-                else if (wasId)
-                {
-                    wasId = false;
-                }
+                break;
             }
-            return false;
+            return modifier;
         }
 
-        // IsMethod must be called before! This sets up on it.
-        private static bool IsProperty(IEnumerable<Classify> classifications)
-        {
-            return classifications.Last().Classification.Contains(ClassificationIdentifier);
-        }
-
-        private static bool IsAddEventHandler(IEnumerable<Classify> classifications, ITextStructureNavigator textStructureNavigator, SnapshotSpan span)
-        {
-            if (classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("add")).Any())
-            {
-                SnapshotSpan eventSpan = textStructureNavigator.GetSpanOfEnclosing(span);
-                while (eventSpan.Span.Start == span.Span.Start
-                    || eventSpan.Snapshot.GetText(new Span(eventSpan.Span.Start, 1)).Equals("{"))
-                    eventSpan = textStructureNavigator.GetSpanOfEnclosing(eventSpan);
-                string eventText = eventSpan.Snapshot.GetText(new Span(eventSpan.Span.Start, span.Start - eventSpan.Span.Start)).ToLower();
-                return eventText.Contains("event");
-            }
-            return false;
-        }
-
-        private static bool IsRemoveEventHandler(IEnumerable<Classify> classifications, ITextStructureNavigator textStructureNavigator, SnapshotSpan span)
-        {
-            if (classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("remove")).Any())
-            {
-                SnapshotSpan eventSpan = textStructureNavigator.GetSpanOfEnclosing(span);
-                while (eventSpan.Span.Start == span.Span.Start
-                    || eventSpan.Snapshot.GetText(new Span(eventSpan.Span.Start, 1)).Equals("{"))
-                    eventSpan = textStructureNavigator.GetSpanOfEnclosing(eventSpan);
-                string eventText = eventSpan.Snapshot.GetText(new Span(eventSpan.Span.Start, span.Start - eventSpan.Span.Start)).ToLower();
-                return eventText.Contains("event");
-            }
-            return false;
-        }
-
-        private static bool IsPropertySetter(IEnumerable<Classify> classifications, ITextStructureNavigator textStructureNavigator, SnapshotSpan span)
-        {
-            if (classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("set")).Any())
-            {
-                return true;
-            }
-            return false;
-        }
-
-        private static bool IsPropertyGetter(IEnumerable<Classify> classifications, ITextStructureNavigator textStructureNavigator, SnapshotSpan span)
-        {
-            if (classifications.Where(c =>
-                                    c.Classification.Contains(ClassificationKeyword)
-                                    && c.Word.Equals("get")).Any())
-            {
-                return true;
-            }
-            return false;
-        }
-
-
-
-
-
-
-        private static string GetModifier(ITextStructureNavigator textStructureNavigator, SnapshotSpan span)
-        {
-            SnapshotSpan parentSpan = textStructureNavigator.GetSpanOfEnclosing(span);
-            if (parentSpan.Span.Start == span.Span.Start)
-                parentSpan = textStructureNavigator.GetSpanOfEnclosing(parentSpan);
-            string parentText = parentSpan.Snapshot.GetText(parentSpan.Span.Start, "namespace".Length).ToLower();
-            if (parentText.Equals("namespace"))
-                return ModifierInternal;
-            return ModifierPrivate;
-        }
-
-        private struct Classify
-        {
-            public string Classification { get; set; }
-            public string Word { get; set; }
-        }
     }
 }
