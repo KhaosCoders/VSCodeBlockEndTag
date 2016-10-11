@@ -124,7 +124,9 @@ namespace CodeBlockEndTag
         {
             var tag = adornment.Adornment as CBETagControl;
             if (tag != null)
+            {
                 tag.TagClicked -= Adornment_TagClicked;
+            }
             _adornmentCache.Remove(adornment);
         }
 
@@ -136,7 +138,8 @@ namespace CodeBlockEndTag
         {
             foreach (var span in spans)
             {
-                foreach (var tag in GetTags(span))
+                var tags = GetTags(span);
+                foreach (var tag in tags)
                 {
                     yield return tag;
                 }
@@ -156,7 +159,8 @@ namespace CodeBlockEndTag
         internal ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>> GetTags(SnapshotSpan span)
         {
             if (!CBETagPackage.CBETaggerEnabled ||
-                span.Snapshot != _TextView.TextBuffer.CurrentSnapshot)
+                span.Snapshot != _TextView.TextBuffer.CurrentSnapshot ||
+                span.Length == 0)
             {
                 return EmptyTagColllection;
             }
@@ -164,6 +168,9 @@ namespace CodeBlockEndTag
             return GetTagsCore(span);
         }
 
+#if DEBUG
+        System.Diagnostics.Stopwatch watch;
+#endif
         private ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>> GetTagsCore(SnapshotSpan span)
         {
             var list = new List<ITagSpan<IntraTextAdornmentTag>>();
@@ -182,7 +189,12 @@ namespace CodeBlockEndTag
             SnapshotSpan cbSnapshotSpan;
             TagSpan<IntraTextAdornmentTag> cbTagSpan;
 
-
+#if DEBUG
+            // Stop time
+            if (watch == null)
+                watch = new System.Diagnostics.Stopwatch();
+            watch.Restart();
+#endif
             // Find all closing bracets
             for (int i = 0; i < span.Length; i++)
             {
@@ -236,7 +248,8 @@ namespace CodeBlockEndTag
                     continue;
 
                 var iconMoniker = Microsoft.VisualStudio.Imaging.KnownMonikers.QuestionMark;
-                if (!string.IsNullOrWhiteSpace(cbHeader) && !cbHeader.Contains("{"))
+                if (CBETagPackage.CBEDisplayMode != (int)CBEOptionPage.DisplayModes.Text &&
+                    !string.IsNullOrWhiteSpace(cbHeader) && !cbHeader.Contains("{"))
                 {
                     iconMoniker = IconMonikerSelector.SelectMoniker(cbHeader);
                 }
@@ -247,7 +260,7 @@ namespace CodeBlockEndTag
                                         o.StartPosition == cbStartPosition &&
                                         o.EndPosition == cbEndPosition)
                                     .FirstOrDefault();
-                
+
                 if (cbAdornmentData?.Adornment != null)
                 {
                     tagElement = cbAdornmentData.Adornment as CBETagControl;
@@ -275,6 +288,16 @@ namespace CodeBlockEndTag
                 cbTagSpan = new TagSpan<IntraTextAdornmentTag>(cbSnapshotSpan, cbTag);
                 list.Add(cbTagSpan);
             }
+
+#if DEBUG
+            watch.Stop();
+            if (watch.Elapsed.Milliseconds > 100)
+            {
+                System.Diagnostics.Debug.WriteLine("Time elapsed: " + watch.Elapsed +
+                    " on Thread: " + System.Threading.Thread.CurrentThread.ManagedThreadId +
+                    " in Span: " + span.Start.Position + ":" + span.End.Position + " length: " + span.Length);
+            }
+#endif
 
             return new ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>>(list);
         }
@@ -397,15 +420,27 @@ namespace CodeBlockEndTag
         /// </summary>
         private void OnPackageOptionChanged(object sender)
         {
-            InvalidateCache();
+            int start = Math.Max(0, _VisibleSpan.HasValue ? _VisibleSpan.Value.Start : 0);
+            int end = Math.Max(1, _VisibleSpan.HasValue ? _VisibleSpan.Value.End : 1);
+            InvalidateSpan(new Span(start, end - start));
         }
 
-        private void InvalidateCache()
+        /// <summary>
+        /// Invalidates all cached tags within or after the given span
+        /// </summary>
+        private void InvalidateSpan(Span invalidateSpan, bool clearCache = true)
         {
-            _adornmentCache.ToList().ForEach(a => RemoveFromCache(a));
+            // Remove tags from cache
+            if (clearCache)
+            {
+                _adornmentCache
+                    .Where(a => a.HeaderStartPosition >= invalidateSpan.Start || a.EndPosition >= invalidateSpan.Start)
+                    .ToList().ForEach(a => RemoveFromCache(a));
+            }
+
+            // Invalidate span
             _changedEvent?.Invoke(this, new SnapshotSpanEventArgs(
-                new SnapshotSpan(_TextView.TextBuffer.CurrentSnapshot,
-                Span.FromBounds(0, _TextView.TextBuffer.CurrentSnapshot.Length))));
+                new SnapshotSpan(_TextView.TextBuffer.CurrentSnapshot, invalidateSpan)));
         }
 
         #endregion
@@ -447,11 +482,11 @@ namespace CodeBlockEndTag
         /// <returns>true if the tag is visible (or if all tags are shown)</returns>
         private bool IsTagVisible(int start, int end, Span? visibleSpan)
         {
-            return (CBETagPackage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always ||
-                visibleSpan == null || !visibleSpan.HasValue ||
-                    (start < visibleSpan.Value.Start
-                    && end >= visibleSpan.Value.Start
-                    && end <= visibleSpan.Value.End));
+            if (CBETagPackage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always 
+                || visibleSpan == null || !visibleSpan.HasValue)
+                return true;
+            var val = visibleSpan.Value;
+            return (start < val.Start && end >= val.Start && end <= val.End);
         }
 
         /// <summary>
@@ -480,12 +515,44 @@ namespace CodeBlockEndTag
         {
             // get new visible span
             var visibleSpan = GetVisibleSpan(_TextView);
-            if (_VisibleSpan != visibleSpan)
+            // only if new visible span is different from old
+            if (!_VisibleSpan.HasValue ||
+                _VisibleSpan.Value.Start != visibleSpan.Value.Start ||
+                _VisibleSpan.Value.End < visibleSpan.Value.End)
             {
+                // invalidate new and/or old visible span
+                List<Span> invalidSpans = new List<Span>();
+                var newSpan = visibleSpan.Value;
+                if (!_VisibleSpan.HasValue)
+                {
+                    invalidSpans.Add(new Span(newSpan.Start, newSpan.End - newSpan.Start));
+                }
+                else
+                {
+                    var oldSpan = _VisibleSpan.Value;
+                    // invalidate two spans if old and new do not overlap
+                    if (newSpan.Start > oldSpan.End || newSpan.End < oldSpan.Start)
+                    {
+                        invalidSpans.Add(new Span(newSpan.Start, newSpan.End - newSpan.Start));
+                        invalidSpans.Add(new Span(oldSpan.Start, oldSpan.End - oldSpan.Start));
+                    }
+                    else
+                    {
+                        // invalidate one big span (old and new joined)
+                        int start = Math.Min(newSpan.Start, oldSpan.Start);
+                        int end = Math.Max(newSpan.End, oldSpan.End);
+                        invalidSpans.Add(new Span(start, end - start));
+                    }
+                }
+
                 _VisibleSpan = visibleSpan;
 
                 // refresh tags
-                InvalidateCache();
+                foreach (var span in invalidSpans)
+                {
+                    if (CBETagPackage.CBEVisibilityMode != (int)CBEOptionPage.VisibilityModes.Always)
+                        InvalidateSpan(span, false);
+                }
             }
         }
 
