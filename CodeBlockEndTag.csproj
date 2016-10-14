@@ -67,6 +67,7 @@
     <Compile Include="CBETagger.cs" />
     <Compile Include="CBETaggerProvider.cs" />
     <Compile Include="CBETagPackage.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="IconMonikerSelector.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

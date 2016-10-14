@@ -22,8 +22,7 @@ namespace CodeBlockEndTag
     {
         private static readonly ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>> EmptyTagColllection =
             new ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>>(new List<ITagSpan<IntraTextAdornmentTag>>());
-
-
+        
         #region Properties & Fields
 
         // EventHandler for ITagger<IntraTextAdornmentTag> tags changed event
@@ -163,6 +162,18 @@ namespace CodeBlockEndTag
                 span.Length == 0)
             {
                 return EmptyTagColllection;
+            }
+
+            // if big span, return only tags for visible area
+            if (span.Length>1000 && _VisibleSpan != null && _VisibleSpan.HasValue)
+            {
+                var overlap = span.Overlap(_VisibleSpan.Value);
+                if (overlap != null && overlap.HasValue)
+                {
+                    span = overlap.Value;
+                    if (span.Length == 0)
+                        return EmptyTagColllection;
+                }
             }
 
             return GetTagsCore(span);
@@ -515,6 +526,9 @@ namespace CodeBlockEndTag
         {
             // get new visible span
             var visibleSpan = GetVisibleSpan(_TextView);
+            if (visibleSpan == null || !visibleSpan.HasValue)
+                return;
+
             // only if new visible span is different from old
             if (!_VisibleSpan.HasValue ||
                 _VisibleSpan.Value.Start != visibleSpan.Value.Start ||
@@ -525,7 +539,7 @@ namespace CodeBlockEndTag
                 var newSpan = visibleSpan.Value;
                 if (!_VisibleSpan.HasValue)
                 {
-                    invalidSpans.Add(new Span(newSpan.Start, newSpan.End - newSpan.Start));
+                    invalidSpans.Add(newSpan);
                 }
                 else
                 {
@@ -533,15 +547,13 @@ namespace CodeBlockEndTag
                     // invalidate two spans if old and new do not overlap
                     if (newSpan.Start > oldSpan.End || newSpan.End < oldSpan.Start)
                     {
-                        invalidSpans.Add(new Span(newSpan.Start, newSpan.End - newSpan.Start));
-                        invalidSpans.Add(new Span(oldSpan.Start, oldSpan.End - oldSpan.Start));
+                        invalidSpans.Add(newSpan);
+                        invalidSpans.Add(oldSpan);
                     }
                     else
                     {
                         // invalidate one big span (old and new joined)
-                        int start = Math.Min(newSpan.Start, oldSpan.Start);
-                        int end = Math.Max(newSpan.End, oldSpan.End);
-                        invalidSpans.Add(new Span(start, end - start));
+                        invalidSpans.Add(newSpan.Join(oldSpan));
                     }
                 }
 
