@@ -9,6 +9,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Utilities;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
 
 namespace CodeBlockEndTag
 {
@@ -48,6 +51,10 @@ namespace CodeBlockEndTag
         public const string PackageGuidString = "d7c91e0f-240b-4605-9f35-accf63a68623";
 
 
+        [Import]
+        internal IContentTypeRegistryService ContentTypeRegistryService { get; set; }
+
+
         public delegate void PackageOptionChangedHandler(object sender);
         /// <summary>
         /// Event fired if any option in the OptionPage is changed
@@ -75,8 +82,37 @@ namespace CodeBlockEndTag
             _instance = this;
         }
 
+        /// <summary>
+        /// Gets a list of all possible content types in VisualStudio
+        /// </summary>
+        public static IList<IContentType> ContentTypes { get; private set; }
+
+
+        /// <summary>
+        /// Load the list of content types
+        /// </summary>
+        internal static void ReadContentTypes(IContentTypeRegistryService ContentTypeRegistryService)
+        {
+            if (ContentTypes != null) return;
+            ContentTypes = new List<IContentType>();
+            foreach (var ct in ContentTypeRegistryService.ContentTypes)
+            {
+                if (ct.IsOfType("code"))
+                    ContentTypes.Add(ct);
+            }
+        }
+
 
         #region Option Values
+
+        public static string CBEContentTypes
+        {
+            get
+            {
+                CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
+                return page.CBEContentTypes;
+            }
+        }
 
         public static int CBEDisplayMode
         {

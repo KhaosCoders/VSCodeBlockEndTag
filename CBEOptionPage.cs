@@ -16,6 +16,22 @@ namespace CodeBlockEndTag
         public delegate void OptionChangedHandler(object sender);
         public event OptionChangedHandler OptionChanged;
 
+        /// <summary>
+        /// Gets or sets the supported VS content types for the extension
+        /// </summary>
+        public string CBEContentTypes
+        {
+            get { return cbeContentTypes; }
+            set
+            {
+                if (cbeContentTypes != value)
+                {
+                    cbeContentTypes = value;
+                }
+            }
+        }
+        private string cbeContentTypes = "CSharp";
+
 
         /// <summary>
         /// Gets or set the option: Enable CodeBlock End Tagger

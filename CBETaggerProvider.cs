@@ -29,6 +29,10 @@ namespace CodeBlockEndTag
 
         [Import]
         internal ITextSearchService TextSearchService { get; set; }
+
+        [Import]
+        internal IContentTypeRegistryService ContentTypeRegistryService { get; set; }
+
 #pragma warning restore CS0649
         #endregion
 
@@ -46,7 +50,18 @@ namespace CodeBlockEndTag
             // provide the tag only on the top-level buffer
             if (textView.TextBuffer != buffer)
                 return null;
+
+            // hand over the ContentTypeRegistryService to package for option page
+            CBETagPackage.ReadContentTypes(ContentTypeRegistryService);
+
+
             
+
+            IContentType type = textView.TextBuffer.ContentType;
+
+
+
+
             // return new instance of CBETagger
             return new CBETagger(this, wpfTextView) as ITagger<T>;
         }
