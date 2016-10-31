@@ -12,7 +12,7 @@ using System.Collections.ObjectModel;
 namespace CodeBlockEndTag
 {
 
-    /// <summary>
+    /// <summary> 
     /// This tagger provides editor tags that are inserted into the TextView (IntraTextAdornmentTags)
     /// The tags are added after each code block encapsulated by curly bracets: { ... }
     /// The tags will show the code blocks condition, or whatever serves as header for the block
@@ -22,7 +22,7 @@ namespace CodeBlockEndTag
     {
         private static readonly ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>> EmptyTagColllection =
             new ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>>(new List<ITagSpan<IntraTextAdornmentTag>>());
-        
+
         #region Properties & Fields
 
         // EventHandler for ITagger<IntraTextAdornmentTag> tags changed event
@@ -165,7 +165,7 @@ namespace CodeBlockEndTag
             }
 
             // if big span, return only tags for visible area
-            if (span.Length>1000 && _VisibleSpan != null && _VisibleSpan.HasValue)
+            if (span.Length > 1000 && _VisibleSpan != null && _VisibleSpan.HasValue)
             {
                 var overlap = span.Overlap(_VisibleSpan.Value);
                 if (overlap != null && overlap.HasValue)
@@ -199,6 +199,8 @@ namespace CodeBlockEndTag
             IntraTextAdornmentTag cbTag;
             SnapshotSpan cbSnapshotSpan;
             TagSpan<IntraTextAdornmentTag> cbTagSpan;
+            bool isSingleLineComment = false;
+            bool isMultiLineComment = false;
 
 #if DEBUG
             // Stop time
@@ -206,12 +208,51 @@ namespace CodeBlockEndTag
                 watch = new System.Diagnostics.Stopwatch();
             watch.Restart();
 #endif
+            
+
             // Find all closing bracets
             for (int i = 0; i < span.Length; i++)
             {
                 var position = i + offset;
                 var chr = snapshot[position];
-                if (chr != '}')
+
+                // Skip comments
+                switch(chr)
+                {
+                    case '/':
+                        if (position > 0)
+                        {
+                            if (snapshot[position - 1] == '/')
+                                isSingleLineComment = true;
+                            if (snapshot[position - 1] == '*')
+                            {
+                                if (!isMultiLineComment)
+                                {
+                                    // Multiline comment was not started in this span
+                                    // Every tag until now was inside a comment
+                                    foreach(var tag in list)
+                                    {
+                                        RemoveFromCache((tag.Tag.Adornment as CBETagControl).AdornmentData);
+                                    }
+                                    list.Clear();
+                                }
+                                isMultiLineComment = false;
+                            }
+                        }
+                        break;
+                    case '*':
+                        if (position > 0 && snapshot[position - 1] == '/')
+                            isMultiLineComment = true;
+                        break;
+                    case (char)10:
+                        isSingleLineComment = false;
+                        break;
+                    case (char)13:
+                        isSingleLineComment = false;
+                        break;
+                }
+                
+                if (chr != '}' || isSingleLineComment || isMultiLineComment)
                     continue;
 
                 // getting start and end position of code block
@@ -325,7 +366,7 @@ namespace CodeBlockEndTag
             var currentSpan = cbSpan;
 
             // set end of header to first start of code block {
-            for (int i = cbSpan.Start; i <= cbSpan.End; i++)
+            for (int i = cbSpan.Start; i < cbSpan.End; i++)
             {
                 if (snapshot[i] == '{')
                 {
@@ -493,7 +534,7 @@ namespace CodeBlockEndTag
         /// <returns>true if the tag is visible (or if all tags are shown)</returns>
         private bool IsTagVisible(int start, int end, Span? visibleSpan)
         {
-            if (CBETagPackage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always 
+            if (CBETagPackage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always
                 || visibleSpan == null || !visibleSpan.HasValue)
                 return true;
             var val = visibleSpan.Value;

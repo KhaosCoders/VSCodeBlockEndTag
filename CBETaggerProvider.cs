@@ -7,6 +7,7 @@ using System.ComponentModel.Composition;
 
 namespace CodeBlockEndTag
 {
+    
     /// <summary>
     /// This class serves as factory for VS to create the CBETagger
     /// </summary>
@@ -29,10 +30,7 @@ namespace CodeBlockEndTag
 
         [Import]
         internal ITextSearchService TextSearchService { get; set; }
-
-        [Import]
-        internal IContentTypeRegistryService ContentTypeRegistryService { get; set; }
-
+        
 #pragma warning restore CS0649
         #endregion
 
@@ -50,17 +48,11 @@ namespace CodeBlockEndTag
             // provide the tag only on the top-level buffer
             if (textView.TextBuffer != buffer)
                 return null;
-
-            // hand over the ContentTypeRegistryService to package for option page
-            CBETagPackage.ReadContentTypes(ContentTypeRegistryService);
-
-
             
-
+            // Check if content type (language) is supported and active for tagging
             IContentType type = textView.TextBuffer.ContentType;
-
-
-
+            if (!CBETagPackage.IsLanguageSupported(type.TypeName))
+                return null;
 
             // return new instance of CBETagger
             return new CBETagger(this, wpfTextView) as ITagger<T>;

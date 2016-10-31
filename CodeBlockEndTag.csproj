@@ -51,6 +51,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="BoolArrayConverter.cs" />
     <Compile Include="CBAdornmentData.cs" />
     <Compile Include="CBEOptionPage.cs">
       <SubType>Component</SubType>

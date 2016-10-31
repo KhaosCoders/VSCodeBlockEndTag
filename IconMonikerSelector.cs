@@ -20,11 +20,21 @@ namespace CodeBlockEndTag
         private const string ModifierSealed = "sealed";
         private const string ModifierPartial = "partial";
         private const string ModifierStatic = "static";
+        private const string ModifierConst = "const";
+        private const string ModifierReadonly = "readonly";
+        private const string ModifierExplicit = "explicit";
+        private const string ModifierFriend = "friend";
+        private const string ModifierInline = "inline";
+        private const string ModifierVolatile = "volatile";
+        private const string ModifierMutable = "mutable";
+        private const string ModifierVirtual = "virtual";
 
         private static readonly string[] Modifiers = new string[]
         {
             ModifierPublic, ModifierPrivate, ModifierProtected, ModifierInternal,
-            ModifierSealed, ModifierPartial, ModifierStatic
+            ModifierSealed, ModifierPartial, ModifierStatic, ModifierConst, ModifierReadonly,
+            ModifierExplicit, ModifierFriend, ModifierInline, ModifierVolatile, ModifierMutable,
+            ModifierVirtual
         };
 
         private delegate ImageMoniker IconSelector(string keyword, string modifier);
@@ -54,6 +64,10 @@ namespace CodeBlockEndTag
             if (keyword.Contains('['))
             {
                 keyword = keyword.Substring(0, keyword.IndexOf('['));
+            }
+            if (keyword.Contains('<'))
+            {
+                keyword = keyword.Substring(0, keyword.IndexOf('<'));
             }
 
             // setup keyword icons
@@ -154,8 +168,10 @@ namespace CodeBlockEndTag
             }));
             iconSelectors.Add("if", new IconSelector((keyword, modifier) => KnownMonikers.If));
             iconSelectors.Add("else", new IconSelector((keyword, modifier) => KnownMonikers.If));
+            iconSelectors.Add("do", new IconSelector((keyword, modifier) => KnownMonikers.DoWhile));
             iconSelectors.Add("while", new IconSelector((keyword, modifier) => KnownMonikers.While));
             iconSelectors.Add("for", new IconSelector((keyword, modifier) => KnownMonikers.ForEachLoop));
+            iconSelectors.Add("foreach", new IconSelector((keyword, modifier) => KnownMonikers.ForEachLoop));
             iconSelectors.Add("typedef", new IconSelector((keyword, modifier) => KnownMonikers.TypeDefinition));
             iconSelectors.Add("new", new IconSelector((keyword, modifier) => KnownMonikers.NewItem));
             iconSelectors.Add("switch", new IconSelector((keyword, modifier) => KnownMonikers.FlowSwitch));
@@ -169,6 +185,29 @@ namespace CodeBlockEndTag
             iconSelectors.Add("remove", new IconSelector((keyword, modifier) => KnownMonikers.EventMissing));
             iconSelectors.Add("get", new IconSelector((keyword, modifier) => KnownMonikers.ReturnParameter));
             iconSelectors.Add("set", new IconSelector((keyword, modifier) => KnownMonikers.InsertParameter));
+
+            // C/C++ Icons
+            iconSelectors.Add("union", new IconSelector((keyword, modifier) => KnownMonikers.Union));
+            iconSelectors.Add("template", new IconSelector((keyword, modifier) => KnownMonikers.Template));
+            iconSelectors.Add("synchronized", new IconSelector((keyword, modifier) => KnownMonikers.SynchronousMessage));
+
+            // PowerShell
+            iconSelectors.Add("elseif", new IconSelector((keyword, modifier) => KnownMonikers.If));
+            iconSelectors.Add("begin", new IconSelector((keyword, modifier) => KnownMonikers.StartPoint));
+            iconSelectors.Add("process", new IconSelector((keyword, modifier) => KnownMonikers.Action));
+            iconSelectors.Add("end", new IconSelector((keyword, modifier) => KnownMonikers.EndPoint));
+            iconSelectors.Add("data", new IconSelector((keyword, modifier) => KnownMonikers.DataList));
+            iconSelectors.Add("dynamicparam", new IconSelector((keyword, modifier) => KnownMonikers.NewParameter));
+            iconSelectors.Add("filter", new IconSelector((keyword, modifier) => KnownMonikers.Filter));
+            iconSelectors.Add("function", new IconSelector((keyword, modifier) => KnownMonikers.MethodPublic));
+            iconSelectors.Add("workflow", new IconSelector((keyword, modifier) => KnownMonikers.WorkflowInterop));
+            iconSelectors.Add("inlinescript", new IconSelector((keyword, modifier) => KnownMonikers.Inline));
+            iconSelectors.Add("parallel", new IconSelector((keyword, modifier) => KnownMonikers.Parallel));
+            iconSelectors.Add("sequence", new IconSelector((keyword, modifier) => KnownMonikers.Sequence));
+            iconSelectors.Add("trap", new IconSelector((keyword, modifier) => KnownMonikers.TryCatch));
+
+
+
         }
 
         private static string GetModifier(string[] words, out int modifierCount)

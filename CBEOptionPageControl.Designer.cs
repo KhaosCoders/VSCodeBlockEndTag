@@ -42,10 +42,15 @@
             this.cntInfo = new System.Windows.Forms.GroupBox();
             this.lblLink = new System.Windows.Forms.LinkLabel();
             this.lblInfo = new System.Windows.Forms.Label();
+            this.cntLanguages = new System.Windows.Forms.GroupBox();
+            this.lviLanguages = new System.Windows.Forms.CheckedListBox();
+            this.lnkGitHub = new System.Windows.Forms.LinkLabel();
+            this.lblSuggestMore = new System.Windows.Forms.Label();
             this.cntVisibilityMode.SuspendLayout();
             this.cntNavigateMode.SuspendLayout();
             this.cntDisplayMode.SuspendLayout();
             this.cntInfo.SuspendLayout();
+            this.cntLanguages.SuspendLayout();
             this.SuspendLayout();
             // 
             // chkCBETaggerEnabled
@@ -210,10 +215,61 @@
             this.lblInfo.TabIndex = 0;
             this.lblInfo.Text = "This extension is 100% free to use. But you might buy me a drink or two ;)";
             // 
+            // cntLanguages
+            // 
+            this.cntLanguages.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.cntLanguages.Controls.Add(this.lviLanguages);
+            this.cntLanguages.Controls.Add(this.lnkGitHub);
+            this.cntLanguages.Controls.Add(this.lblSuggestMore);
+            this.cntLanguages.Location = new System.Drawing.Point(237, 27);
+            this.cntLanguages.Name = "cntLanguages";
+            this.cntLanguages.Size = new System.Drawing.Size(188, 353);
+            this.cntLanguages.TabIndex = 10;
+            this.cntLanguages.TabStop = false;
+            this.cntLanguages.Text = "Enable for code type";
+            // 
+            // lviLanguages
+            // 
+            this.lviLanguages.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.lviLanguages.FormattingEnabled = true;
+            this.lviLanguages.Items.AddRange(new object[] {
+            "Dummy"});
+            this.lviLanguages.Location = new System.Drawing.Point(6, 19);
+            this.lviLanguages.Name = "lviLanguages";
+            this.lviLanguages.Size = new System.Drawing.Size(176, 289);
+            this.lviLanguages.TabIndex = 11;
+            this.lviLanguages.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.lviLanguages_ItemCheck);
+            // 
+            // lnkGitHub
+            // 
+            this.lnkGitHub.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.lnkGitHub.AutoSize = true;
+            this.lnkGitHub.LinkBehavior = System.Windows.Forms.LinkBehavior.AlwaysUnderline;
+            this.lnkGitHub.Location = new System.Drawing.Point(6, 334);
+            this.lnkGitHub.Name = "lnkGitHub";
+            this.lnkGitHub.Size = new System.Drawing.Size(77, 13);
+            this.lnkGitHub.TabIndex = 12;
+            this.lnkGitHub.TabStop = true;
+            this.lnkGitHub.Text = "Visit on GitHub";
+            this.lnkGitHub.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkGitHub_LinkClicked);
+            // 
+            // lblSuggestMore
+            // 
+            this.lblSuggestMore.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.lblSuggestMore.AutoSize = true;
+            this.lblSuggestMore.Location = new System.Drawing.Point(4, 315);
+            this.lblSuggestMore.Name = "lblSuggestMore";
+            this.lblSuggestMore.Size = new System.Drawing.Size(126, 13);
+            this.lblSuggestMore.TabIndex = 11;
+            this.lblSuggestMore.Text = "Feel free to suggest more";
+            // 
             // CBEOptionPageControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.cntLanguages);
             this.Controls.Add(this.cntInfo);
             this.Controls.Add(this.cntDisplayMode);
             this.Controls.Add(this.cntNavigateMode);
@@ -229,6 +285,8 @@
             this.cntDisplayMode.PerformLayout();
             this.cntInfo.ResumeLayout(false);
             this.cntInfo.PerformLayout();
+            this.cntLanguages.ResumeLayout(false);
+            this.cntLanguages.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -250,5 +308,9 @@
         private System.Windows.Forms.GroupBox cntInfo;
         private System.Windows.Forms.LinkLabel lblLink;
         private System.Windows.Forms.Label lblInfo;
+        private System.Windows.Forms.GroupBox cntLanguages;
+        private System.Windows.Forms.LinkLabel lnkGitHub;
+        private System.Windows.Forms.Label lblSuggestMore;
+        private System.Windows.Forms.CheckedListBox lviLanguages;
     }
 }

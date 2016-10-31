@@ -14,6 +14,7 @@ namespace CodeBlockEndTag
     public partial class CBEOptionPageControl : UserControl
     {
         private const string DonateUrl = @"https://www.paypal.com/us/cgi-bin/webscr?cmd=_flow&SESSION=zy33NAY9x6TPiFGk26vXckTW9Nf1ffD_E4RDdAq3kXHpzeFaSsPIkFbZv9y&dispatch=5885d80a13c0db1f8e263663d3faee8d64813b57e559a2578463e58274899069";
+        private const string GitHubUrl = @"https://github.com/KhaosCoders/VSCodeBlockEndTag";
 
 
         public CBEOptionPageControl()
@@ -36,6 +37,17 @@ namespace CodeBlockEndTag
             rdbIconAndText.Checked = (optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.IconAndText);
             rdbIconOnly.Checked = (optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.Icon);
             rdbTextOnly.Checked = (optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.Text);
+
+            lviLanguages.Items.Clear();
+            string[] langs = optionsPage.SupportedLangDisplayNames;
+            for (int i = 0; i<langs.Length; i++)
+            {
+                lviLanguages.Items.Add(langs[i]);
+                if(optionsPage.SupportedLangActive[i])
+                {
+                    lviLanguages.SetItemChecked(i, true);
+                }
+            }
         }
 
         private void lblLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
@@ -43,6 +55,13 @@ namespace CodeBlockEndTag
             ProcessStartInfo sInfo = new ProcessStartInfo(DonateUrl);
             Process.Start(sInfo);
         }
+
+        private void lnkGitHub_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            ProcessStartInfo sInfo = new ProcessStartInfo(GitHubUrl);
+            Process.Start(sInfo);
+        }
+
 
         private void chkCBETaggerEnabled_CheckedChanged(object sender, EventArgs e)
         {
@@ -90,6 +109,10 @@ namespace CodeBlockEndTag
             if (rdbTextOnly.Checked)
                 optionsPage.CBEDisplayMode = (int)CBEOptionPage.DisplayModes.Text;
         }
-        
+
+        private void lviLanguages_ItemCheck(object sender, ItemCheckEventArgs e)
+        {
+            optionsPage.SetSupportedLangActive(e.Index, e.NewValue == CheckState.Checked);
+        }
     }
 }

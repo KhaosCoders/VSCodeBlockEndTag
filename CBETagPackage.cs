@@ -50,11 +50,6 @@ namespace CodeBlockEndTag
         /// </summary>
         public const string PackageGuidString = "d7c91e0f-240b-4605-9f35-accf63a68623";
 
-
-        [Import]
-        internal IContentTypeRegistryService ContentTypeRegistryService { get; set; }
-
-
         public delegate void PackageOptionChangedHandler(object sender);
         /// <summary>
         /// Event fired if any option in the OptionPage is changed
@@ -102,18 +97,14 @@ namespace CodeBlockEndTag
             }
         }
 
-
-        #region Option Values
-
-        public static string CBEContentTypes
+        public static bool IsLanguageSupported(string lang)
         {
-            get
-            {
-                CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
-                return page.CBEContentTypes;
-            }
+            CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
+            return page.IsLanguageSupported(lang);
         }
 
+        #region Option Values
+        
         public static int CBEDisplayMode
         {
             get
@@ -163,7 +154,6 @@ namespace CodeBlockEndTag
             base.Initialize();
             CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
             page.OptionChanged += Page_OptionChanged;
-
         }
 
         private void Page_OptionChanged(object sender)
