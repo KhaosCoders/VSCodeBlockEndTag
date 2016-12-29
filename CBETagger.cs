@@ -491,8 +491,11 @@ namespace CodeBlockEndTag
             }
 
             // Invalidate span
-            _changedEvent?.Invoke(this, new SnapshotSpanEventArgs(
-                new SnapshotSpan(_TextView.TextBuffer.CurrentSnapshot, invalidateSpan)));
+            if (invalidateSpan.End <= _TextView.TextBuffer.CurrentSnapshot.Length)
+            {
+                _changedEvent?.Invoke(this, new SnapshotSpanEventArgs(
+                    new SnapshotSpan(_TextView.TextBuffer.CurrentSnapshot, invalidateSpan)));
+            }
         }
 
         #endregion
