@@ -58,8 +58,28 @@ namespace CodeBlockEndTag
 
         private void Button_PreviewMouseDown(object sender, MouseButtonEventArgs e)
         {
+            int clickCount = 0;
+            Key modifier = Key.None;
+            Key altModifier = Key.None;
+
+            switch (CBETagPackage.CBEClickMode)
+            {
+                case (int)CBEOptionPage.ClickMode.SingleClick:
+                    clickCount = 1;
+                    break;
+                case (int)CBEOptionPage.ClickMode.CtrlClick:
+                    clickCount = 1;
+                    modifier = Key.LeftCtrl;
+                    altModifier = Key.RightCtrl;
+                    break;
+                case (int)CBEOptionPage.ClickMode.DoubleClick:
+                    clickCount = 2;
+                    break;
+            }
+
             if (e.LeftButton == MouseButtonState.Pressed &&
-                e.ClickCount == CBETagPackage.CBEClickCount &&
+                e.ClickCount == clickCount &&
+                (modifier == Key.None || Keyboard.IsKeyDown(modifier) || (altModifier != Key.None && Keyboard.IsKeyDown(altModifier))) &&
                 AdornmentData != null)
             {
                 TagClicked?.Invoke(AdornmentData);

@@ -46,6 +46,7 @@
             this.lviLanguages = new System.Windows.Forms.CheckedListBox();
             this.lnkGitHub = new System.Windows.Forms.LinkLabel();
             this.lblSuggestMore = new System.Windows.Forms.Label();
+            this.rdbCtrlClick = new System.Windows.Forms.RadioButton();
             this.cntVisibilityMode.SuspendLayout();
             this.cntNavigateMode.SuspendLayout();
             this.cntDisplayMode.SuspendLayout();
@@ -101,6 +102,7 @@
             // 
             // cntNavigateMode
             // 
+            this.cntNavigateMode.Controls.Add(this.rdbCtrlClick);
             this.cntNavigateMode.Controls.Add(this.rdbDoubleClick);
             this.cntNavigateMode.Controls.Add(this.rdbSingleClick);
             this.cntNavigateMode.Location = new System.Drawing.Point(24, 97);
@@ -265,6 +267,18 @@
             this.lblSuggestMore.TabIndex = 11;
             this.lblSuggestMore.Text = "Feel free to suggest more";
             // 
+            // rdbCtrlClick
+            // 
+            this.rdbCtrlClick.AutoSize = true;
+            this.rdbCtrlClick.Location = new System.Drawing.Point(109, 19);
+            this.rdbCtrlClick.Name = "rdbCtrlClick";
+            this.rdbCtrlClick.Size = new System.Drawing.Size(82, 17);
+            this.rdbCtrlClick.TabIndex = 8;
+            this.rdbCtrlClick.TabStop = true;
+            this.rdbCtrlClick.Text = "CTRL+Click";
+            this.rdbCtrlClick.UseVisualStyleBackColor = true;
+            this.rdbCtrlClick.CheckedChanged += new System.EventHandler(this.rdbCtrlClick_CheckedChanged);
+            // 
             // CBEOptionPageControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -312,5 +326,6 @@
         private System.Windows.Forms.LinkLabel lnkGitHub;
         private System.Windows.Forms.Label lblSuggestMore;
         private System.Windows.Forms.CheckedListBox lviLanguages;
+        private System.Windows.Forms.RadioButton rdbCtrlClick;
     }
 }

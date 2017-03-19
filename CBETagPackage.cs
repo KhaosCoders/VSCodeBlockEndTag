@@ -132,12 +132,12 @@ namespace CodeBlockEndTag
             }
         }
 
-        public static int CBEClickCount
+        public static int CBEClickMode
         {
             get
             {
                 CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
-                return page.CBEClickCount;
+                return page.CBEClickMode;
             }
         }
 

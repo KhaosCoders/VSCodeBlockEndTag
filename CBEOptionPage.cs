@@ -137,21 +137,28 @@ namespace CodeBlockEndTag
         }
 
         /// <summary>
-        /// Gets or sets the option: Navigate on (Single-Click / Double-Click)
+        /// Gets or sets the option: Navigate on (Single-Click / Double-Click / CTRL+Click)
         /// </summary>
-        public int CBEClickCount
+        public int CBEClickMode
         {
-            get { return cbeClickCount; }
+            get { return cbeClickMode; }
             set
             {
-                if (cbeClickCount != value)
+                if (cbeClickMode != value)
                 {
-                    cbeClickCount = value;
+                    cbeClickMode = value;
                     OptionChanged?.Invoke(this);
                 }
             }
         }
-        private int cbeClickCount = 1;
+        private int cbeClickMode = (int)ClickMode.SingleClick;
+
+        public enum ClickMode : int
+        {
+            SingleClick = 1,
+            DoubleClick = 2,
+            CtrlClick = 3
+        }
 
         /// <summary>
         /// Gets or sets the option: Show Tags when (Always / Header not visible)

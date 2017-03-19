@@ -31,8 +31,9 @@ namespace CodeBlockEndTag
             rdbAlways.Checked = (optionsPage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always);
             rdbHeaderInvisible.Checked = (optionsPage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.HeaderNotVisible);
 
-            rdbSingleClick.Checked = (optionsPage.CBEClickCount == 1);
-            rdbDoubleClick.Checked = (optionsPage.CBEClickCount == 2);
+            rdbSingleClick.Checked = (optionsPage.CBEClickMode == (int)CBEOptionPage.ClickMode.SingleClick);
+            rdbDoubleClick.Checked = (optionsPage.CBEClickMode == (int)CBEOptionPage.ClickMode.DoubleClick);
+            rdbCtrlClick.Checked = (optionsPage.CBEClickMode == (int)CBEOptionPage.ClickMode.CtrlClick);
 
             rdbIconAndText.Checked = (optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.IconAndText);
             rdbIconOnly.Checked = (optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.Icon);
@@ -83,13 +84,19 @@ namespace CodeBlockEndTag
         private void rdbSingleClick_CheckedChanged(object sender, EventArgs e)
         {
             if (rdbSingleClick.Checked)
-                optionsPage.CBEClickCount = 1;
+                optionsPage.CBEClickMode = (int)CBEOptionPage.ClickMode.SingleClick;
         }
 
         private void rdbDoubleClick_CheckedChanged(object sender, EventArgs e)
         {
             if (rdbDoubleClick.Checked)
-                optionsPage.CBEClickCount = 2;
+                optionsPage.CBEClickMode = (int)CBEOptionPage.ClickMode.DoubleClick;
+        }
+
+        private void rdbCtrlClick_CheckedChanged(object sender, EventArgs e)
+        {
+            if (rdbCtrlClick.Checked)
+                optionsPage.CBEClickMode = (int)CBEOptionPage.ClickMode.CtrlClick;
         }
 
         private void rdbIconAndText_CheckedChanged(object sender, EventArgs e)
@@ -114,5 +121,6 @@ namespace CodeBlockEndTag
         {
             optionsPage.SetSupportedLangActive(e.Index, e.NewValue == CheckState.Checked);
         }
+
     }
 }
