@@ -2,6 +2,7 @@
 	Visual Studio 2017 Support
 	Added CTRL+Click to navigation option
 	Strip unnecessary spaces from tags
+	Hide tags when caret is in same line
 
 Version 1.1:
 	Fixed ArgumentOutOfRangeException

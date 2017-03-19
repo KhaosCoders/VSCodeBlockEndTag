@@ -82,12 +82,23 @@ namespace CodeBlockEndTag
             // Hook up events
             _TextView.TextBuffer.Changed += TextBuffer_Changed;
             _TextView.LayoutChanged += OnTextViewLayoutChanged;
+            _TextView.Caret.PositionChanged += Caret_PositionChanged;
             CBETagPackage.Instance.PackageOptionChanged += OnPackageOptionChanged;
         }
 
         #endregion
 
         #region TextBuffer changed
+
+        private void Caret_PositionChanged(object sender, CaretPositionChangedEventArgs e)
+        {
+            var start = Math.Min(e.OldPosition.BufferPosition.Position, e.NewPosition.BufferPosition.Position);
+            var end = Math.Max(e.OldPosition.BufferPosition.Position, e.NewPosition.BufferPosition.Position);
+            if (start != end)
+            {
+                InvalidateSpan(new Span(start, end - start), false);
+            }
+        }
 
         void TextBuffer_Changed(object sender, TextContentChangedEventArgs e)
         {
@@ -301,7 +312,7 @@ namespace CodeBlockEndTag
                 }
 
                 // Skip tag if option "only when header not visible"
-                if (_VisibleSpan != null && !IsTagVisible(cbHeaderPosition, cbEndPosition, _VisibleSpan))
+                if (_VisibleSpan != null && !IsTagVisible(cbHeaderPosition, cbEndPosition, _VisibleSpan, snapshot))
                     continue;
 
                 var iconMoniker = Microsoft.VisualStudio.Imaging.KnownMonikers.QuestionMark;
@@ -537,16 +548,42 @@ namespace CodeBlockEndTag
         /// <summary>
         /// Checks if a tag's header is visible
         /// </summary>
-        /// <param name="tagSpan">the span of the tag</param>
+        /// <param name="start">Start position of code block</param>
+        /// <param name="end">End position of code block</param>
         /// <param name="visibleSpan">the visible span in the textview</param>
+        /// <param name="snapshot">reference to text snapshot. Used for caret check</param>
         /// <returns>true if the tag is visible (or if all tags are shown)</returns>
-        private bool IsTagVisible(int start, int end, Span? visibleSpan)
+        private bool IsTagVisible(int start, int end, Span? visibleSpan, ITextSnapshot snapshot)
         {
+            bool isVisible = false;
+            // Check general condition
             if (CBETagPackage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always
                 || visibleSpan == null || !visibleSpan.HasValue)
-                return true;
-            var val = visibleSpan.Value;
-            return (start < val.Start && end >= val.Start && end <= val.End);
+                isVisible = true;
+            // Check visible span
+            if (!isVisible)
+            {
+                var val = visibleSpan.Value;
+                isVisible = (start < val.Start && end >= val.Start && end <= val.End);
+            }
+            // Check if caret is in this line
+            if (isVisible && _TextView != null)
+            {
+                var caretIndex = _TextView.Caret.Position.BufferPosition.Position;
+                var lineStart = Math.Min(caretIndex, end);
+                var lineEnd = Math.Max(caretIndex, end);
+                if (lineStart == lineEnd)
+                {
+                    isVisible = false;
+                }
+                else
+                {
+                    string line = snapshot.GetText(lineStart, lineEnd - lineStart);
+                    if (!line.Contains('\n'))
+                        isVisible = false;
+                }
+            }
+            return isVisible;
         }
 
         /// <summary>
