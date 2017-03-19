@@ -293,6 +293,11 @@ namespace CodeBlockEndTag
                     cbHeader = cbHeader.Trim()
                         .Replace(Environment.NewLine, "")
                         .Replace('\t', ' ');
+                    // Strip unnecessary spaces
+                    while (cbHeader.Contains("  "))
+                    {
+                        cbHeader = cbHeader.Replace("  ", " ");
+                    }
                 }
 
                 // Skip tag if option "only when header not visible"
