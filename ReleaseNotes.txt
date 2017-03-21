@@ -1,4 +1,8 @@
-﻿Version 1.2:
+﻿Version 1.3:
+	Fixed ArgumentOutOfRangeException on copy&paste
+
+
+Version 1.2:
 	Visual Studio 2017 Support
 	Added CTRL+Click to navigation option
 	Strip unnecessary spaces from tags

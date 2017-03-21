@@ -219,7 +219,7 @@ namespace CodeBlockEndTag
                 watch = new System.Diagnostics.Stopwatch();
             watch.Restart();
 #endif
-            
+
 
             // Find all closing bracets
             for (int i = 0; i < span.Length; i++)
@@ -228,7 +228,7 @@ namespace CodeBlockEndTag
                 var chr = snapshot[position];
 
                 // Skip comments
-                switch(chr)
+                switch (chr)
                 {
                     case '/':
                         if (position > 0)
@@ -241,7 +241,7 @@ namespace CodeBlockEndTag
                                 {
                                     // Multiline comment was not started in this span
                                     // Every tag until now was inside a comment
-                                    foreach(var tag in list)
+                                    foreach (var tag in list)
                                     {
                                         RemoveFromCache((tag.Tag.Adornment as CBETagControl).AdornmentData);
                                     }
@@ -262,7 +262,7 @@ namespace CodeBlockEndTag
                         isSingleLineComment = false;
                         break;
                 }
-                
+
                 if (chr != '}' || isSingleLineComment || isMultiLineComment)
                     continue;
 
@@ -576,7 +576,7 @@ namespace CodeBlockEndTag
                 {
                     isVisible = false;
                 }
-                else
+                else if (lineStart >= 0 && lineEnd <= snapshot.Length)
                 {
                     string line = snapshot.GetText(lineStart, lineEnd - lineStart);
                     if (!line.Contains('\n'))
