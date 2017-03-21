@@ -469,12 +469,22 @@ namespace CodeBlockEndTag
         /// <summary>
         /// Handles the click event on a tag
         /// </summary>
-        private void Adornment_TagClicked(CBAdornmentData adornment)
+        private void Adornment_TagClicked(CBAdornmentData adornment, bool jumpToHead)
         {
             if (_TextView != null)
             {
-                SnapshotPoint targetPoint = new SnapshotPoint(_TextView.TextBuffer.CurrentSnapshot, adornment.HeaderStartPosition);
-                _TextView.DisplayTextLineContainingBufferPosition(targetPoint, 30, ViewRelativePosition.Top);
+                SnapshotPoint targetPoint = new SnapshotPoint();
+                if (jumpToHead)
+                {
+                    // Jump to header
+                    targetPoint = new SnapshotPoint(_TextView.TextBuffer.CurrentSnapshot, adornment.HeaderStartPosition);
+                    _TextView.DisplayTextLineContainingBufferPosition(targetPoint, 30, ViewRelativePosition.Top);
+                }
+                else
+                {
+                    // Set caret behind closing bracet
+                    targetPoint = new SnapshotPoint(_TextView.TextBuffer.CurrentSnapshot, adornment.EndPosition + 1);
+                }
                 _TextView.Caret.MoveTo(targetPoint);
             }
         }

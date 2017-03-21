@@ -47,7 +47,7 @@ namespace CodeBlockEndTag
 
         internal CBAdornmentData AdornmentData { get; set; }
 
-        internal delegate void TagClickHandler(CBAdornmentData adornment);
+        internal delegate void TagClickHandler(CBAdornmentData adornment, bool jumpToHead);
         internal event TagClickHandler TagClicked;
 
         public CBETagControl()
@@ -77,12 +77,11 @@ namespace CodeBlockEndTag
                     break;
             }
 
-            if (e.LeftButton == MouseButtonState.Pressed &&
-                e.ClickCount == clickCount &&
-                (modifier == Key.None || Keyboard.IsKeyDown(modifier) || (altModifier != Key.None && Keyboard.IsKeyDown(altModifier))) &&
-                AdornmentData != null)
+            if (AdornmentData != null && e.ClickCount >= clickCount)
             {
-                TagClicked?.Invoke(AdornmentData);
+                bool jumpToHead = (e.LeftButton == MouseButtonState.Pressed &&
+                    (modifier == Key.None || Keyboard.IsKeyDown(modifier) || (altModifier != Key.None && Keyboard.IsKeyDown(altModifier))));
+                TagClicked?.Invoke(AdornmentData, jumpToHead);
             }
         }
     }
