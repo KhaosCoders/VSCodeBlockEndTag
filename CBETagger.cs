@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Collections.ObjectModel;
+using Microsoft.VisualStudio.Editor;
 
 namespace CodeBlockEndTag
 {
@@ -48,6 +49,17 @@ namespace CodeBlockEndTag
         /// </summary>
         readonly List<CBAdornmentData> _adornmentCache = new List<CBAdornmentData>();
 
+
+        /// <summary>
+        /// Used to get the editor font size
+        /// </summary>
+        readonly IVsFontsAndColorsInformation _VSFontsInformation;
+
+        /// <summary>
+        /// FontSize used by tags
+        /// </summary>
+        double _FontSize = 9;
+
         /// <summary>
         /// This is the visible span of the textview
         /// </summary>
@@ -78,12 +90,55 @@ namespace CodeBlockEndTag
             // Getting services provided by VisualStudio
             _TextStructureNavigator = provider.GetTextStructureNavigator(_TextView.TextBuffer);
             _TextSearchService = provider.TextSearchService;
+            _VSFontsInformation = TryGetFontAndColorInfo(provider.VsFontsAndColorsInformationService);
 
             // Hook up events
             _TextView.TextBuffer.Changed += TextBuffer_Changed;
             _TextView.LayoutChanged += OnTextViewLayoutChanged;
             _TextView.Caret.PositionChanged += Caret_PositionChanged;
             CBETagPackage.Instance.PackageOptionChanged += OnPackageOptionChanged;
+            if (_VSFontsInformation != null)
+            {
+                ReloadFontSize();
+                _VSFontsInformation.Updated += _VSFontsInformation_Updated;
+            }
+        }
+
+        #endregion
+
+        #region VsFontAndColorInformation
+
+        private IVsFontsAndColorsInformation TryGetFontAndColorInfo(IVsFontsAndColorsInformationService service)
+        {
+            try
+            {
+                var guidTextFileType = new Guid(2184822468u, 61063, 4560, 140, 152, 0, 192, 79, 194, 171, 34);
+                var fonts = new FontsAndColorsCategory(
+                    guidTextFileType,
+                    DefGuidList.guidTextEditorFontCategory,
+                    DefGuidList.guidTextEditorFontCategory);
+                return service.GetFontAndColorInformation(fonts);
+            }
+            catch { }
+            return null;
+        }
+
+        private void ReloadFontSize()
+        {
+            if (_VSFontsInformation!=null)
+            {
+                try
+                {
+                    var pref = _VSFontsInformation.GetFontAndColorPreferences();
+                    var font = System.Drawing.Font.FromHfont(pref.hRegularViewFont);
+                    _FontSize = font.SizeInPoints;
+                }
+                catch { }
+            }
+        }
+        private void _VSFontsInformation_Updated(object sender, EventArgs e)
+        {
+            ReloadFontSize();
         }
 
         #endregion
@@ -342,18 +397,20 @@ namespace CodeBlockEndTag
                         IconMoniker = iconMoniker,
                         DisplayMode = CBETagPackage.CBEDisplayMode
                     };
-
+                    
                     tagElement.TagClicked += Adornment_TagClicked;
-
+                    
                     cbAdornmentData = new CBAdornmentData(cbStartPosition, cbEndPosition, cbHeaderPosition, tagElement);
                     tagElement.AdornmentData = cbAdornmentData;
                     _adornmentCache.Add(cbAdornmentData);
                 }
 
+                tagElement.LineHeight = _FontSize;
+
                 // Add new tag to list
                 cbTag = new IntraTextAdornmentTag(tagElement, null);
                 cbSnapshotSpan = new SnapshotSpan(snapshot, position + 1, 0);
-                cbTagSpan = new TagSpan<IntraTextAdornmentTag>(cbSnapshotSpan, cbTag);
+                cbTagSpan = new TagSpan<IntraTextAdornmentTag>(cbSnapshotSpan, cbTag);          
                 list.Add(cbTagSpan);
             }
 

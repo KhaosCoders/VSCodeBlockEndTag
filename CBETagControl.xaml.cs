@@ -44,6 +44,14 @@ namespace CodeBlockEndTag
             DependencyProperty.Register("DisplayMode", typeof(int), typeof(CBETagControl), new PropertyMetadata(0));
 
 
+        public double LineHeight
+        {
+            get { return (double)GetValue(LineHeightProperty); }
+            set { SetValue(LineHeightProperty, value); }
+        }
+        public static readonly DependencyProperty LineHeightProperty =
+            DependencyProperty.Register("LineHeight", typeof(double), typeof(CBETagControl), new PropertyMetadata(9d));
+
 
         internal CBAdornmentData AdornmentData { get; set; }
 

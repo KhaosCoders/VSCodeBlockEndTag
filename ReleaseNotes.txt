@@ -1,6 +1,7 @@
 ﻿Version 1.3:
 	Fixed ArgumentOutOfRangeException on copy&paste
 	Added ability to 'click through' tags, when CTRL+Click option is set
+	Scale tags with editor line height (font size)
 
 Version 1.2:
 	Visual Studio 2017 Support

@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
+using Microsoft.VisualStudio.Editor;
 using System.ComponentModel.Composition;
 
 namespace CodeBlockEndTag
@@ -31,6 +32,9 @@ namespace CodeBlockEndTag
         [Import]
         internal ITextSearchService TextSearchService { get; set; }
         
+        [Import]
+        internal IVsFontsAndColorsInformationService VsFontsAndColorsInformationService { get; set; }
+
 #pragma warning restore CS0649
         #endregion
 
