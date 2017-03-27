@@ -8,20 +8,24 @@
              xmlns:local="clr-namespace:CodeBlockEndTag"
              mc:Ignorable="d" 
              d:DesignHeight="20" d:DesignWidth="100" >
+    <UserControl.Resources>
+        <local:AdditionValueConverter x:Key="addConv" />
+    </UserControl.Resources>
 
     <Button 
         Cursor="Arrow"
         PreviewMouseDown="Button_PreviewMouseDown">
-        
+
         <Button.Template>
             <ControlTemplate>
-                <StackPanel Orientation="Horizontal">
+                <Canvas Height="{Binding LineHeight}">
                     <imaging:CrispImage 
                             x:Name="imgTag"
+                            Canvas.Top="0"
+                            Canvas.Left="4"
                             Width="{Binding LineHeight}"
                             Height="{Binding LineHeight}"
-                            Moniker="{Binding IconMoniker}"
-                            Margin="4 0 0 0">
+                            Moniker="{Binding IconMoniker}">
                         <imaging:CrispImage.Style>
                             <Style TargetType="imaging:CrispImage">
                                 <Setter Property="Visibility" Value="Visible" />
@@ -36,14 +40,15 @@
 
                     <TextBlock 
                             x:Name="txtTag"
+                            Canvas.Top="0"
+                            Canvas.Left="{Binding LineHeight, Converter={StaticResource addConv}, ConverterParameter=8}"
                             Text="{Binding Text}"
                             Background="Transparent"
                             FontFamily="Calibri"
                             Foreground="#FF999999"
                             FontSize="{Binding LineHeight}"
                             FontWeight="Normal"
-                            FontStyle="Normal"
-                            Margin="4 0 0 0">
+                            FontStyle="Normal">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Visible" />
@@ -55,7 +60,7 @@
                             </Style>
                         </TextBlock.Style>
                     </TextBlock>
-                </StackPanel>
+                </Canvas>
             </ControlTemplate>
         </Button.Template>
     </Button>

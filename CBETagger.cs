@@ -131,7 +131,7 @@ namespace CodeBlockEndTag
                 {
                     var pref = _VSFontsInformation.GetFontAndColorPreferences();
                     var font = System.Drawing.Font.FromHfont(pref.hRegularViewFont);
-                    _FontSize = font.SizeInPoints;
+                    _FontSize = font.Size;
                 }
                 catch { }
             }
