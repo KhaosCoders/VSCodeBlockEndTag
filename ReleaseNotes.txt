@@ -1,6 +1,7 @@
 ﻿Version 1.4:
 	Use bigger font size for tags
 	Fixed an issue where keyboard inputs got lost after click on tag
+	Fixed Visual Studio 2015 not showing tags
 
 Version 1.3:
 	Fixed ArgumentOutOfRangeException on copy&paste
