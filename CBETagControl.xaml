@@ -7,14 +7,16 @@
              xmlns:catalog="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.ImageCatalog" 
              xmlns:local="clr-namespace:CodeBlockEndTag"
              mc:Ignorable="d" 
-             d:DesignHeight="20" d:DesignWidth="100" >
+             d:DesignHeight="20" d:DesignWidth="100"
+             Focusable="False" KeyboardNavigation.IsTabStop="False">
     <UserControl.Resources>
         <local:AdditionValueConverter x:Key="addConv" />
     </UserControl.Resources>
 
     <Button 
         Cursor="Arrow"
-        PreviewMouseDown="Button_PreviewMouseDown">
+        PreviewMouseDown="Button_PreviewMouseDown"
+        Focusable="False" KeyboardNavigation.IsTabStop="False">
 
         <Button.Template>
             <ControlTemplate>
@@ -48,7 +50,8 @@
                             Foreground="#FF999999"
                             FontSize="{Binding LineHeight}"
                             FontWeight="Normal"
-                            FontStyle="Normal">
+                            FontStyle="Normal"
+                            Focusable="False" KeyboardNavigation.IsTabStop="False">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Visible" />
