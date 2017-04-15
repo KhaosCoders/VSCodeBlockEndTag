@@ -405,8 +405,8 @@ namespace CodeBlockEndTag
                     _adornmentCache.Add(cbAdornmentData);
                 }
 
-                tagElement.LineHeight = _FontSize;
-
+                tagElement.LineHeight = _FontSize * CBETagPackage.CBETagScale;
+                
                 // Add new tag to list
                 cbTag = new IntraTextAdornmentTag(tagElement, null);
                 cbSnapshotSpan = new SnapshotSpan(snapshot, position + 1, 0);

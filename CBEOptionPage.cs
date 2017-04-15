@@ -183,6 +183,23 @@ namespace CodeBlockEndTag
             HeaderNotVisible = 2
         }
 
+        /// <summary>
+        /// Gets or sets the option: Tag size
+        /// </summary>
+        public double CBETagScale
+        {
+            get { return cbeTagScale; }
+            set
+            {
+                if (cbeTagScale != value)
+                {
+                    cbeTagScale = value;
+                    OptionChanged?.Invoke(this);
+                }
+            }
+        }
+        private double cbeTagScale = 0.8;
+
         #endregion
 
         #region save / load 

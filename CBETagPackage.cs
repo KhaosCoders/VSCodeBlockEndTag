@@ -141,6 +141,15 @@ namespace CodeBlockEndTag
             }
         }
 
+        public static double CBETagScale
+        {
+            get
+            {
+                CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
+                return page.CBETagScale;
+            }
+        }
+
         #endregion
 
         #region Package Members

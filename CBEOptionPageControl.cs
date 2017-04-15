@@ -39,6 +39,9 @@ namespace CodeBlockEndTag
             rdbIconOnly.Checked = (optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.Icon);
             rdbTextOnly.Checked = (optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.Text);
 
+            tbrTagSize.Value = (int)(optionsPage.CBETagScale * 10);
+            UpdateSizeLabel();
+
             lviLanguages.Items.Clear();
             string[] langs = optionsPage.SupportedLangDisplayNames;
             for (int i = 0; i<langs.Length; i++)
@@ -122,5 +125,15 @@ namespace CodeBlockEndTag
             optionsPage.SetSupportedLangActive(e.Index, e.NewValue == CheckState.Checked);
         }
 
+        private void tbrTagSize_ValueChanged(object sender, EventArgs e)
+        {
+            optionsPage.CBETagScale = (sender as TrackBar).Value / 10.0d;
+            UpdateSizeLabel();
+        }
+
+        private void UpdateSizeLabel()
+        {
+            lblTagSize.Text = string.Format("{0} %", optionsPage.CBETagScale * 100);
+        }
     }
 }

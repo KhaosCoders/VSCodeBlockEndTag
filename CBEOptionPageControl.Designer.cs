@@ -33,6 +33,7 @@
             this.rdbHeaderInvisible = new System.Windows.Forms.RadioButton();
             this.rdbAlways = new System.Windows.Forms.RadioButton();
             this.cntNavigateMode = new System.Windows.Forms.GroupBox();
+            this.rdbCtrlClick = new System.Windows.Forms.RadioButton();
             this.rdbDoubleClick = new System.Windows.Forms.RadioButton();
             this.rdbSingleClick = new System.Windows.Forms.RadioButton();
             this.cntDisplayMode = new System.Windows.Forms.GroupBox();
@@ -46,12 +47,16 @@
             this.lviLanguages = new System.Windows.Forms.CheckedListBox();
             this.lnkGitHub = new System.Windows.Forms.LinkLabel();
             this.lblSuggestMore = new System.Windows.Forms.Label();
-            this.rdbCtrlClick = new System.Windows.Forms.RadioButton();
+            this.cntTagSize = new System.Windows.Forms.GroupBox();
+            this.tbrTagSize = new System.Windows.Forms.TrackBar();
+            this.lblTagSize = new System.Windows.Forms.Label();
             this.cntVisibilityMode.SuspendLayout();
             this.cntNavigateMode.SuspendLayout();
             this.cntDisplayMode.SuspendLayout();
             this.cntInfo.SuspendLayout();
             this.cntLanguages.SuspendLayout();
+            this.cntTagSize.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.tbrTagSize)).BeginInit();
             this.SuspendLayout();
             // 
             // chkCBETaggerEnabled
@@ -111,6 +116,18 @@
             this.cntNavigateMode.TabIndex = 8;
             this.cntNavigateMode.TabStop = false;
             this.cntNavigateMode.Text = "Navigate on";
+            // 
+            // rdbCtrlClick
+            // 
+            this.rdbCtrlClick.AutoSize = true;
+            this.rdbCtrlClick.Location = new System.Drawing.Point(109, 19);
+            this.rdbCtrlClick.Name = "rdbCtrlClick";
+            this.rdbCtrlClick.Size = new System.Drawing.Size(82, 17);
+            this.rdbCtrlClick.TabIndex = 8;
+            this.rdbCtrlClick.TabStop = true;
+            this.rdbCtrlClick.Text = "CTRL+Click";
+            this.rdbCtrlClick.UseVisualStyleBackColor = true;
+            this.rdbCtrlClick.CheckedChanged += new System.EventHandler(this.rdbCtrlClick_CheckedChanged);
             // 
             // rdbDoubleClick
             // 
@@ -224,9 +241,9 @@
             this.cntLanguages.Controls.Add(this.lviLanguages);
             this.cntLanguages.Controls.Add(this.lnkGitHub);
             this.cntLanguages.Controls.Add(this.lblSuggestMore);
-            this.cntLanguages.Location = new System.Drawing.Point(237, 27);
+            this.cntLanguages.Location = new System.Drawing.Point(237, 97);
             this.cntLanguages.Name = "cntLanguages";
-            this.cntLanguages.Size = new System.Drawing.Size(188, 353);
+            this.cntLanguages.Size = new System.Drawing.Size(188, 283);
             this.cntLanguages.TabIndex = 10;
             this.cntLanguages.TabStop = false;
             this.cntLanguages.Text = "Enable for code type";
@@ -240,7 +257,7 @@
             "Dummy"});
             this.lviLanguages.Location = new System.Drawing.Point(6, 19);
             this.lviLanguages.Name = "lviLanguages";
-            this.lviLanguages.Size = new System.Drawing.Size(176, 289);
+            this.lviLanguages.Size = new System.Drawing.Size(176, 214);
             this.lviLanguages.TabIndex = 11;
             this.lviLanguages.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.lviLanguages_ItemCheck);
             // 
@@ -249,7 +266,7 @@
             this.lnkGitHub.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lnkGitHub.AutoSize = true;
             this.lnkGitHub.LinkBehavior = System.Windows.Forms.LinkBehavior.AlwaysUnderline;
-            this.lnkGitHub.Location = new System.Drawing.Point(6, 334);
+            this.lnkGitHub.Location = new System.Drawing.Point(6, 264);
             this.lnkGitHub.Name = "lnkGitHub";
             this.lnkGitHub.Size = new System.Drawing.Size(77, 13);
             this.lnkGitHub.TabIndex = 12;
@@ -261,34 +278,54 @@
             // 
             this.lblSuggestMore.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lblSuggestMore.AutoSize = true;
-            this.lblSuggestMore.Location = new System.Drawing.Point(4, 315);
+            this.lblSuggestMore.Location = new System.Drawing.Point(4, 245);
             this.lblSuggestMore.Name = "lblSuggestMore";
             this.lblSuggestMore.Size = new System.Drawing.Size(126, 13);
             this.lblSuggestMore.TabIndex = 11;
             this.lblSuggestMore.Text = "Feel free to suggest more";
             // 
-            // rdbCtrlClick
+            // cntTagSize
             // 
-            this.rdbCtrlClick.AutoSize = true;
-            this.rdbCtrlClick.Location = new System.Drawing.Point(109, 19);
-            this.rdbCtrlClick.Name = "rdbCtrlClick";
-            this.rdbCtrlClick.Size = new System.Drawing.Size(82, 17);
-            this.rdbCtrlClick.TabIndex = 8;
-            this.rdbCtrlClick.TabStop = true;
-            this.rdbCtrlClick.Text = "CTRL+Click";
-            this.rdbCtrlClick.UseVisualStyleBackColor = true;
-            this.rdbCtrlClick.CheckedChanged += new System.EventHandler(this.rdbCtrlClick_CheckedChanged);
+            this.cntTagSize.Controls.Add(this.lblTagSize);
+            this.cntTagSize.Controls.Add(this.tbrTagSize);
+            this.cntTagSize.Location = new System.Drawing.Point(237, 27);
+            this.cntTagSize.Name = "cntTagSize";
+            this.cntTagSize.Size = new System.Drawing.Size(188, 64);
+            this.cntTagSize.TabIndex = 10;
+            this.cntTagSize.TabStop = false;
+            this.cntTagSize.Text = "Tag size";
+            // 
+            // tbrTagSize
+            // 
+            this.tbrTagSize.LargeChange = 2;
+            this.tbrTagSize.Location = new System.Drawing.Point(16, 19);
+            this.tbrTagSize.Name = "tbrTagSize";
+            this.tbrTagSize.Size = new System.Drawing.Size(130, 45);
+            this.tbrTagSize.TabIndex = 12;
+            this.tbrTagSize.Value = 8;
+            this.tbrTagSize.ValueChanged += new System.EventHandler(this.tbrTagSize_ValueChanged);
+            // 
+            // lblTagSize
+            // 
+            this.lblTagSize.AutoSize = true;
+            this.lblTagSize.Location = new System.Drawing.Point(152, 21);
+            this.lblTagSize.Name = "lblTagSize";
+            this.lblTagSize.Size = new System.Drawing.Size(30, 13);
+            this.lblTagSize.TabIndex = 13;
+            this.lblTagSize.Text = "80 %";
             // 
             // CBEOptionPageControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.cntTagSize);
             this.Controls.Add(this.cntLanguages);
             this.Controls.Add(this.cntInfo);
             this.Controls.Add(this.cntDisplayMode);
             this.Controls.Add(this.cntNavigateMode);
             this.Controls.Add(this.cntVisibilityMode);
             this.Controls.Add(this.chkCBETaggerEnabled);
+            this.MinimumSize = new System.Drawing.Size(440, 440);
             this.Name = "CBEOptionPageControl";
             this.Size = new System.Drawing.Size(440, 440);
             this.cntVisibilityMode.ResumeLayout(false);
@@ -301,6 +338,9 @@
             this.cntInfo.PerformLayout();
             this.cntLanguages.ResumeLayout(false);
             this.cntLanguages.PerformLayout();
+            this.cntTagSize.ResumeLayout(false);
+            this.cntTagSize.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.tbrTagSize)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -327,5 +367,8 @@
         private System.Windows.Forms.Label lblSuggestMore;
         private System.Windows.Forms.CheckedListBox lviLanguages;
         private System.Windows.Forms.RadioButton rdbCtrlClick;
+        private System.Windows.Forms.GroupBox cntTagSize;
+        private System.Windows.Forms.Label lblTagSize;
+        private System.Windows.Forms.TrackBar tbrTagSize;
     }
 }
