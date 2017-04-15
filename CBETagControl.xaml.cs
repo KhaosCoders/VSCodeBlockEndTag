@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace CodeBlockEndTag
 {
@@ -33,7 +34,7 @@ namespace CodeBlockEndTag
         }
         public static readonly DependencyProperty IconMonikerProperty =
             DependencyProperty.Register("IconMoniker", typeof(ImageMoniker), typeof(CBETagControl), new PropertyMetadata(KnownMonikers.QuestionMark));
-        
+
 
         public int DisplayMode
         {
@@ -64,49 +65,90 @@ namespace CodeBlockEndTag
             InitializeComponent();
         }
 
-        private void Button_PreviewMouseDown(object sender, MouseButtonEventArgs e)
-        {
-            int clickCount = 0;
-            Key modifier = Key.None;
-            Key altModifier = Key.None;
-
-            switch (CBETagPackage.CBEClickMode)
-            {
-                case (int)CBEOptionPage.ClickMode.SingleClick:
-                    clickCount = 1;
-                    break;
-                case (int)CBEOptionPage.ClickMode.CtrlClick:
-                    clickCount = 1;
-                    modifier = Key.LeftCtrl;
-                    altModifier = Key.RightCtrl;
-                    break;
-                case (int)CBEOptionPage.ClickMode.DoubleClick:
-                    clickCount = 2;
-                    break;
-            }
-
-            if (AdornmentData != null && e.ClickCount >= clickCount)
-            {
-                bool jumpToHead = (e.LeftButton == MouseButtonState.Pressed &&
-                    (modifier == Key.None || Keyboard.IsKeyDown(modifier) || (altModifier != Key.None && Keyboard.IsKeyDown(altModifier))));
-                TagClicked?.Invoke(AdornmentData, jumpToHead);
-            }
-        }
-
         protected override Size MeasureOverride(Size constraint)
         {
             var paddingRight = LineHeight / 2;
             if (DisplayMode == 2)
             {
                 // No label
-                return new Size(LineHeight + 4 + paddingRight, LineHeight); 
-            }else
+                return new Size(LineHeight + 4 + paddingRight, LineHeight);
+            }
+            else
             {
                 TextBlock tb = btnTag.Template.FindName("txtTag", btnTag) as TextBlock;
                 Size size = new Size(8 + LineHeight + (tb?.ActualWidth ?? 0) + paddingRight, LineHeight);
                 return size;
             }
         }
-        
+
+        private DispatcherTimer buttonSingleClickTimeout;
+        private bool buttonModifiersPressed;
+
+        private void ButtonSingleClick(object sender, EventArgs e)
+        {
+            buttonSingleClickTimeout.Stop();
+            ButtonClicked(1);
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            buttonModifiersPressed = CheckModifiers();
+            if (buttonSingleClickTimeout == null)
+            {
+                buttonSingleClickTimeout =
+                new DispatcherTimer(
+                    TimeSpan.FromSeconds(0.25),
+                    DispatcherPriority.Background,
+                    ButtonSingleClick,
+                    Dispatcher.CurrentDispatcher);
+            }
+
+            buttonSingleClickTimeout.Start();
+        }
+
+        private void Button_DoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            buttonSingleClickTimeout.Stop();
+            e.Handled = true;
+            ButtonClicked(2);
+        }
+
+        private void ButtonClicked(int clickCount)
+        {
+            int neededClickCount = 0;
+            switch (CBETagPackage.CBEClickMode)
+            {
+                case (int)CBEOptionPage.ClickMode.SingleClick:
+                    neededClickCount = 1;
+                    break;
+                case (int)CBEOptionPage.ClickMode.CtrlClick:
+                    neededClickCount = 1;
+                    break;
+                case (int)CBEOptionPage.ClickMode.DoubleClick:
+                    neededClickCount = 2;
+                    break;
+            }
+
+            if (AdornmentData != null)
+            {
+                bool jumpToHead = (clickCount >= neededClickCount) && buttonModifiersPressed;
+                TagClicked?.Invoke(AdornmentData, jumpToHead);
+            }
+        }
+
+        private bool CheckModifiers()
+        {
+            Key modifier = Key.None;
+            Key altModifier = Key.None;
+            switch (CBETagPackage.CBEClickMode)
+            {
+                case (int)CBEOptionPage.ClickMode.CtrlClick:
+                    modifier = Key.LeftCtrl;
+                    altModifier = Key.RightCtrl;
+                    break;
+            }
+            return (modifier == Key.None || Keyboard.IsKeyDown(modifier) || (altModifier != Key.None && Keyboard.IsKeyDown(altModifier)));
+        }
+
     }
 }

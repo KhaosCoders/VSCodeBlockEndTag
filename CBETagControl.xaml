@@ -16,7 +16,8 @@
     <Button 
         x:Name="btnTag"
         Cursor="Arrow"
-        PreviewMouseDown="Button_PreviewMouseDown"
+        Click="Button_Click"
+        MouseDoubleClick="Button_DoubleClick"
         Focusable="False" KeyboardNavigation.IsTabStop="False">
 
         <Button.Template>
