@@ -1,4 +1,7 @@
-﻿Version 1.4:
+﻿Version 1.5:
+	Fixed tag overlaps code bug
+
+Version 1.4:
 	Use bigger font size for tags
 	Fixed an issue where keyboard inputs got lost after click on tag
 	Fixed Visual Studio 2015 not showing tags

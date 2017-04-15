@@ -14,6 +14,7 @@
     </UserControl.Resources>
 
     <Button 
+        x:Name="btnTag"
         Cursor="Arrow"
         PreviewMouseDown="Button_PreviewMouseDown"
         Focusable="False" KeyboardNavigation.IsTabStop="False">

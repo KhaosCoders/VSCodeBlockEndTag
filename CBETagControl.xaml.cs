@@ -92,5 +92,21 @@ namespace CodeBlockEndTag
                 TagClicked?.Invoke(AdornmentData, jumpToHead);
             }
         }
+
+        protected override Size MeasureOverride(Size constraint)
+        {
+            var paddingRight = LineHeight / 2;
+            if (DisplayMode == 2)
+            {
+                // No label
+                return new Size(LineHeight + 4 + paddingRight, LineHeight); 
+            }else
+            {
+                TextBlock tb = btnTag.Template.FindName("txtTag", btnTag) as TextBlock;
+                Size size = new Size(8 + LineHeight + (tb?.ActualWidth ?? 0) + paddingRight, LineHeight);
+                return size;
+            }
+        }
+        
     }
 }
