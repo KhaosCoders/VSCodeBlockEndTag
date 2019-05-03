@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using System.Linq;
 using Microsoft.VisualStudio.Shell.Settings;
 using Microsoft.VisualStudio.Settings;
+using System.Windows.Threading;
 
 namespace CodeBlockEndTag
 {
@@ -208,6 +209,8 @@ namespace CodeBlockEndTag
         {
             base.SaveSettingsToStorage();
 
+            Dispatcher.CurrentDispatcher.VerifyAccess();
+
             var settingsManager = new ShellSettingsManager(ServiceProvider.GlobalProvider);
             var userSettingsStore = settingsManager.GetWritableSettingsStore(SettingsScope.UserSettings);
 
@@ -224,6 +227,8 @@ namespace CodeBlockEndTag
         public override void LoadSettingsFromStorage()
         {
             base.LoadSettingsFromStorage();
+
+            Dispatcher.CurrentDispatcher.VerifyAccess();
 
             var settingsManager = new ShellSettingsManager(ServiceProvider.GlobalProvider);
             var userSettingsStore = settingsManager.GetWritableSettingsStore(SettingsScope.UserSettings);

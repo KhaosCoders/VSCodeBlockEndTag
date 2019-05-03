@@ -1,4 +1,7 @@
-﻿Version 1.5:
+﻿Version 2.0:
+	Support for VisualStudio 2019
+
+Version 1.5:
 	Fixed tag overlaps code bug
 	Added "Tag Size" Option for custom tag scale
 	Added ability to 'click through' tags, when Double-Click option is set
