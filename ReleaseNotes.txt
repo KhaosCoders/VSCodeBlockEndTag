@@ -1,4 +1,7 @@
-﻿Version 2.0:
+﻿Version 2.0.2:
+	Fixed some bugs while start-up and tear-down phases
+
+Version 2.0.1:
 	Support for VisualStudio 2019
 
 Version 1.5:

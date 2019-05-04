@@ -96,7 +96,10 @@ namespace CodeBlockEndTag
             _TextView.TextBuffer.Changed += TextBuffer_Changed;
             _TextView.LayoutChanged += OnTextViewLayoutChanged;
             _TextView.Caret.PositionChanged += Caret_PositionChanged;
-            CBETagPackage.Instance.PackageOptionChanged += OnPackageOptionChanged;
+
+            // Listen for package events
+            InitializePackage();
+
             if (_VSFontsInformation != null)
             {
                 ReloadFontSize();
@@ -201,12 +204,19 @@ namespace CodeBlockEndTag
 
         IEnumerable<ITagSpan<IntraTextAdornmentTag>> ITagger<IntraTextAdornmentTag>.GetTags(NormalizedSnapshotSpanCollection spans)
         {
-            foreach (var span in spans)
+            // Check if content type (language) is supported and active for tagging
+            if (CBETagPackage.IsLanguageSupported(_TextView.TextBuffer.ContentType.TypeName))
             {
-                var tags = GetTags(span);
-                foreach (var tag in tags)
+                // Second chance to hook up events
+                InitializePackage();
+
+                foreach (var span in spans)
                 {
-                    yield return tag;
+                    var tags = GetTags(span);
+                    foreach (var tag in tags)
+                    {
+                        yield return tag;
+                    }
                 }
             }
         }
@@ -275,143 +285,149 @@ namespace CodeBlockEndTag
             watch.Restart();
 #endif
 
-
-            // Find all closing bracets
-            for (int i = 0; i < span.Length; i++)
+            try
             {
-                var position = i + offset;
-                var chr = snapshot[position];
-
-                // Skip comments
-                switch (chr)
+                // Find all closing bracets
+                for (int i = 0; i < span.Length; i++)
                 {
-                    case '/':
-                        if (position > 0)
-                        {
-                            if (snapshot[position - 1] == '/')
-                                isSingleLineComment = true;
-                            if (snapshot[position - 1] == '*')
+                    var position = i + offset;
+                    var chr = snapshot[position];
+
+                    // Skip comments
+                    switch (chr)
+                    {
+                        case '/':
+                            if (position > 0)
                             {
-                                if (!isMultiLineComment)
+                                if (snapshot[position - 1] == '/')
+                                    isSingleLineComment = true;
+                                if (snapshot[position - 1] == '*')
                                 {
-                                    // Multiline comment was not started in this span
-                                    // Every tag until now was inside a comment
-                                    foreach (var tag in list)
+                                    if (!isMultiLineComment)
                                     {
-                                        RemoveFromCache((tag.Tag.Adornment as CBETagControl).AdornmentData);
+                                        // Multiline comment was not started in this span
+                                        // Every tag until now was inside a comment
+                                        foreach (var tag in list)
+                                        {
+                                            RemoveFromCache((tag.Tag.Adornment as CBETagControl).AdornmentData);
+                                        }
+                                        list.Clear();
                                     }
-                                    list.Clear();
+                                    isMultiLineComment = false;
                                 }
-                                isMultiLineComment = false;
                             }
-                        }
-                        break;
-                    case '*':
-                        if (position > 0 && snapshot[position - 1] == '/')
-                            isMultiLineComment = true;
-                        break;
-                    case (char)10:
-                        isSingleLineComment = false;
-                        break;
-                    case (char)13:
-                        isSingleLineComment = false;
-                        break;
-                }
-
-                if (chr != '}' || isSingleLineComment || isMultiLineComment)
-                    continue;
-
-                // getting start and end position of code block
-                cbEndPosition = position;
-                if (position >= 0 && snapshot[position - 1] == '{')
-                {
-                    // empty code block {} 
-                    cbStartPosition = position - 1;
-                    cbSpan = new SnapshotSpan(snapshot, cbStartPosition, cbEndPosition - cbStartPosition);
-                }
-                else
-                {
-                    // create inner span to navigate to get code block start
-                    cbSpan = _TextStructureNavigator.GetSpanOfEnclosing(new SnapshotSpan(snapshot, position - 1, 1));
-                    cbStartPosition = cbSpan.Start;
-                }
-
-                // Don't display tag for code blocks on same line
-                if (!snapshot.GetText(cbSpan).Contains('\n'))
-                    continue;
-
-                // getting the code blocks header 
-                cbHeaderPosition = -1;
-                if (snapshot[cbStartPosition] == '{')
-                {
-                    // cbSpan does not contain the header
-                    cbHeader = GetCodeBlockHeader(cbSpan, out cbHeaderPosition);
-                }
-                else
-                {
-                    // cbSpan does contain the header
-                    cbHeader = GetCodeBlockHeader(cbSpan, out cbHeaderPosition, position);
-                }
-
-                // Trim header
-                if (cbHeader != null && cbHeader.Length > 0)
-                {
-                    cbHeader = cbHeader.Trim()
-                        .Replace(Environment.NewLine, "")
-                        .Replace('\t', ' ');
-                    // Strip unnecessary spaces
-                    while (cbHeader.Contains("  "))
-                    {
-                        cbHeader = cbHeader.Replace("  ", " ");
+                            break;
+                        case '*':
+                            if (position > 0 && snapshot[position - 1] == '/')
+                                isMultiLineComment = true;
+                            break;
+                        case (char)10:
+                            isSingleLineComment = false;
+                            break;
+                        case (char)13:
+                            isSingleLineComment = false;
+                            break;
                     }
-                }
 
-                // Skip tag if option "only when header not visible"
-                if (_VisibleSpan != null && !IsTagVisible(cbHeaderPosition, cbEndPosition, _VisibleSpan, snapshot))
-                    continue;
+                    if (chr != '}' || isSingleLineComment || isMultiLineComment)
+                        continue;
 
-                var iconMoniker = Microsoft.VisualStudio.Imaging.KnownMonikers.QuestionMark;
-                if (CBETagPackage.CBEDisplayMode != (int)CBEOptionPage.DisplayModes.Text &&
-                    !string.IsNullOrWhiteSpace(cbHeader) && !cbHeader.Contains("{"))
-                {
-                    iconMoniker = IconMonikerSelector.SelectMoniker(cbHeader);
-                }
-
-                // use cache or create new tag
-                cbAdornmentData = _adornmentCache
-                                    .Where(o =>
-                                        o.StartPosition == cbStartPosition &&
-                                        o.EndPosition == cbEndPosition)
-                                    .FirstOrDefault();
-
-                if (cbAdornmentData?.Adornment != null)
-                {
-                    tagElement = cbAdornmentData.Adornment as CBETagControl;
-                }
-                else
-                {
-                    // create new adornment
-                    tagElement = new CBETagControl()
+                    // getting start and end position of code block
+                    cbEndPosition = position;
+                    if (position >= 0 && snapshot[position - 1] == '{')
                     {
-                        Text = cbHeader,
-                        IconMoniker = iconMoniker,
-                        DisplayMode = CBETagPackage.CBEDisplayMode
-                    };
-                    
-                    tagElement.TagClicked += Adornment_TagClicked;
-                    
-                    cbAdornmentData = new CBAdornmentData(cbStartPosition, cbEndPosition, cbHeaderPosition, tagElement);
-                    tagElement.AdornmentData = cbAdornmentData;
-                    _adornmentCache.Add(cbAdornmentData);
-                }
+                        // empty code block {} 
+                        cbStartPosition = position - 1;
+                        cbSpan = new SnapshotSpan(snapshot, cbStartPosition, cbEndPosition - cbStartPosition);
+                    }
+                    else
+                    {
+                        // create inner span to navigate to get code block start
+                        cbSpan = _TextStructureNavigator.GetSpanOfEnclosing(new SnapshotSpan(snapshot, position - 1, 1));
+                        cbStartPosition = cbSpan.Start;
+                    }
 
-                tagElement.LineHeight = _FontSize * CBETagPackage.CBETagScale;
-                
-                // Add new tag to list
-                cbTag = new IntraTextAdornmentTag(tagElement, null);
-                cbSnapshotSpan = new SnapshotSpan(snapshot, position + 1, 0);
-                cbTagSpan = new TagSpan<IntraTextAdornmentTag>(cbSnapshotSpan, cbTag);          
-                list.Add(cbTagSpan);
+                    // Don't display tag for code blocks on same line
+                    if (!snapshot.GetText(cbSpan).Contains('\n'))
+                        continue;
+
+                    // getting the code blocks header 
+                    cbHeaderPosition = -1;
+                    if (snapshot[cbStartPosition] == '{')
+                    {
+                        // cbSpan does not contain the header
+                        cbHeader = GetCodeBlockHeader(cbSpan, out cbHeaderPosition);
+                    }
+                    else
+                    {
+                        // cbSpan does contain the header
+                        cbHeader = GetCodeBlockHeader(cbSpan, out cbHeaderPosition, position);
+                    }
+
+                    // Trim header
+                    if (cbHeader != null && cbHeader.Length > 0)
+                    {
+                        cbHeader = cbHeader.Trim()
+                            .Replace(Environment.NewLine, "")
+                            .Replace('\t', ' ');
+                        // Strip unnecessary spaces
+                        while (cbHeader.Contains("  "))
+                        {
+                            cbHeader = cbHeader.Replace("  ", " ");
+                        }
+                    }
+
+                    // Skip tag if option "only when header not visible"
+                    if (_VisibleSpan != null && !IsTagVisible(cbHeaderPosition, cbEndPosition, _VisibleSpan, snapshot))
+                        continue;
+
+                    var iconMoniker = Microsoft.VisualStudio.Imaging.KnownMonikers.QuestionMark;
+                    if (CBETagPackage.CBEDisplayMode != (int)CBEOptionPage.DisplayModes.Text &&
+                        !string.IsNullOrWhiteSpace(cbHeader) && !cbHeader.Contains("{"))
+                    {
+                        iconMoniker = IconMonikerSelector.SelectMoniker(cbHeader);
+                    }
+
+                    // use cache or create new tag
+                    cbAdornmentData = _adornmentCache
+                                        .Where(o =>
+                                            o.StartPosition == cbStartPosition &&
+                                            o.EndPosition == cbEndPosition)
+                                        .FirstOrDefault();
+
+                    if (cbAdornmentData?.Adornment != null)
+                    {
+                        tagElement = cbAdornmentData.Adornment as CBETagControl;
+                    }
+                    else
+                    {
+                        // create new adornment
+                        tagElement = new CBETagControl()
+                        {
+                            Text = cbHeader,
+                            IconMoniker = iconMoniker,
+                            DisplayMode = CBETagPackage.CBEDisplayMode
+                        };
+
+                        tagElement.TagClicked += Adornment_TagClicked;
+
+                        cbAdornmentData = new CBAdornmentData(cbStartPosition, cbEndPosition, cbHeaderPosition, tagElement);
+                        tagElement.AdornmentData = cbAdornmentData;
+                        _adornmentCache.Add(cbAdornmentData);
+                    }
+
+                    tagElement.LineHeight = _FontSize * CBETagPackage.CBETagScale;
+
+                    // Add new tag to list
+                    cbTag = new IntraTextAdornmentTag(tagElement, null);
+                    cbSnapshotSpan = new SnapshotSpan(snapshot, position + 1, 0);
+                    cbTagSpan = new TagSpan<IntraTextAdornmentTag>(cbSnapshotSpan, cbTag);
+                    list.Add(cbTagSpan);
+                }
+            }
+            catch (NullReferenceException)
+            {
+                // May happen, when closing a text editor
             }
 
 #if DEBUG
@@ -580,6 +596,22 @@ namespace CodeBlockEndTag
                     new SnapshotSpan(_TextView.TextBuffer.CurrentSnapshot, invalidateSpan)));
             }
         }
+
+        /// <summary>
+        /// Hooks up events at the package
+        /// Due to AsyncPackage usage, the Tagger may be initialized before the Package
+        /// So be safe about this
+        /// </summary>
+        private void InitializePackage()
+        {
+            if (!isPackageInitialized && CBETagPackage.Instance != null)
+            {
+                CBETagPackage.Instance.PackageOptionChanged += OnPackageOptionChanged;
+                isPackageInitialized = true;
+            }
+        }
+
+        private bool isPackageInitialized;
 
         #endregion
 

@@ -61,15 +61,13 @@ namespace CodeBlockEndTag
         /// <summary>
         /// Gets the singelton instance of the class
         /// </summary>
-        public static CBETagPackage Instance
-        {
-            get
-            {
-                return _instance;
-            }
-        }
+        public static CBETagPackage Instance => _instance;
         private static CBETagPackage _instance;
 
+        /// <summary>
+        /// Reference on the package's option page
+        /// </summary>
+        private static CBEOptionPage _optionPage;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CBETagPackage"/> class.
@@ -99,58 +97,19 @@ namespace CodeBlockEndTag
             }
         }
 
-        public static bool IsLanguageSupported(string lang)
-        {
-            CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
-            return page.IsLanguageSupported(lang);
-        }
+        public static bool IsLanguageSupported(string lang) => _optionPage?.IsLanguageSupported(lang) ?? false;
 
         #region Option Values
-        
-        public static int CBEDisplayMode
-        {
-            get
-            {
-                CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
-                return page.CBEDisplayMode;
-            }
-        }
 
-        public static int CBEVisibilityMode
-        {
-            get
-            {
-                CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
-                return page.CBEVisibilityMode;
-            }
-        }
+        public static int CBEDisplayMode => _optionPage?.CBEDisplayMode ?? (int)CBEOptionPage.DisplayModes.IconAndText;
 
-        public static bool CBETaggerEnabled
-        {
-            get
-            {
-                CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
-                return page.CBETaggerEnabled;
-            }
-        }
+        public static int CBEVisibilityMode => _optionPage?.CBEVisibilityMode ?? (int)CBEOptionPage.VisibilityModes.Always;
 
-        public static int CBEClickMode
-        {
-            get
-            {
-                CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
-                return page.CBEClickMode;
-            }
-        }
+        public static bool CBETaggerEnabled => _optionPage?.CBETaggerEnabled ?? false;
 
-        public static double CBETagScale
-        {
-            get
-            {
-                CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
-                return page.CBETagScale;
-            }
-        }
+        public static int CBEClickMode => _optionPage?.CBEClickMode ?? (int)CBEOptionPage.ClickMode.DoubleClick;
+
+        public static double CBETagScale => _optionPage?.CBETagScale ?? 1d;
 
         #endregion
 
@@ -167,14 +126,14 @@ namespace CodeBlockEndTag
             // Switches to the UI thread in order to consume some services used in command initialization
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
-            CBEOptionPage page = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
-            page.OptionChanged += Page_OptionChanged;
-        }
+            _optionPage = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
+            _optionPage.OptionChanged += Page_OptionChanged;
 
-        private void Page_OptionChanged(object sender)
-        {
+            // Update taggers, that were initialized before the package
             PackageOptionChanged?.Invoke(this);
         }
+
+        private void Page_OptionChanged(object sender) => PackageOptionChanged?.Invoke(this);
 
         #endregion
     }

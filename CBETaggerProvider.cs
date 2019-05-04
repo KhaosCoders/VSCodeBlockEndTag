@@ -53,11 +53,6 @@ namespace CodeBlockEndTag
             if (textView.TextBuffer != buffer)
                 return null;
             
-            // Check if content type (language) is supported and active for tagging
-            IContentType type = textView.TextBuffer.ContentType;
-            if (!CBETagPackage.IsLanguageSupported(type.TypeName))
-                return null;
-
             // return new instance of CBETagger
             return new CBETagger(this, wpfTextView) as ITagger<T>;
         }
