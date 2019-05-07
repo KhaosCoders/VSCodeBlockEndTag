@@ -623,15 +623,23 @@ namespace CodeBlockEndTag
         private void Dispose(bool disposing)
         {
             if (_Disposed)
+            {
                 return;
+            }
 
             if (disposing)
             {
                 CBETagPackage.Instance.PackageOptionChanged -= OnPackageOptionChanged;
-                _TextView.LayoutChanged -= OnTextViewLayoutChanged;
-                _TextView.TextBuffer.Changed -= TextBuffer_Changed;
+                if (_TextView != null)
+                {
+                    _TextView.LayoutChanged -= OnTextViewLayoutChanged;
+                    if (_TextView.TextBuffer != null)
+                    {
+                        _TextView.TextBuffer.Changed -= TextBuffer_Changed;
+                    }
+                }
+                _Disposed = true;
             }
-            _Disposed = true;
         }
 
         public void Dispose()

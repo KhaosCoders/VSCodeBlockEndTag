@@ -1,4 +1,14 @@
-﻿Version 2.0.3:
+﻿Version 2.3:
+	Fixed a NullReferenceException when closing an editor
+
+Version 2.2: 
+	Fixed VisualStudio Targets and Dependencies
+
+Version 2.1:
+	Restored VisualStudio 2017 compatibility (second try)
+	Officialy removed VisualStudio 2015 support
+
+Version 2.0.3:
 	Restored VisualStudio 2017 compatibility
 
 Version 2.0.2:
