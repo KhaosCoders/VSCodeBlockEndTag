@@ -1,4 +1,7 @@
-﻿Version 2.3:
+﻿Version 2.4:
+	Restored VisualStudio 2015 compatibility (lost in 2017!)
+
+Version 2.3:
 	Fixed a NullReferenceException when closing an editor
 
 Version 2.2: 
