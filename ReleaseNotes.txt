@@ -1,4 +1,7 @@
-﻿Version 2.4:
+﻿Version 2.5:
+	Fixed a NRE in CBETagger.Dispose(bool). Reported in VS 16.2.0 and 2017
+
+Version 2.4:
 	Restored VisualStudio 2015 compatibility (lost in 2017!)
 
 Version 2.3:

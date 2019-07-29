@@ -128,7 +128,7 @@ namespace CodeBlockEndTag
 
         private void ReloadFontSize()
         {
-            if (_VSFontsInformation!=null)
+            if (_VSFontsInformation != null)
             {
                 try
                 {
@@ -604,7 +604,7 @@ namespace CodeBlockEndTag
         /// </summary>
         private void InitializePackage()
         {
-            if (!isPackageInitialized && CBETagPackage.Instance != null)
+            if (!isPackageInitialized && CBETagPackage.Instance != null && !_Disposed)
             {
                 CBETagPackage.Instance.PackageOptionChanged += OnPackageOptionChanged;
                 isPackageInitialized = true;
@@ -629,7 +629,10 @@ namespace CodeBlockEndTag
 
             if (disposing)
             {
-                CBETagPackage.Instance.PackageOptionChanged -= OnPackageOptionChanged;
+                if (CBETagPackage.Instance != null)
+                {
+                    CBETagPackage.Instance.PackageOptionChanged -= OnPackageOptionChanged;
+                }
                 if (_TextView != null)
                 {
                     _TextView.LayoutChanged -= OnTextViewLayoutChanged;
