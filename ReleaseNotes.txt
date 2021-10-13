@@ -1,4 +1,7 @@
-﻿Version 3.0:
+﻿Version 3.1:
+	Fixed VS 2022 install prerequisites
+
+Version 3.0:
 	Added support for VisualStudio 2022
 
 ﻿Version 2.6:

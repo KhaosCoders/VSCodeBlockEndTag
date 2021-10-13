@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="CodeBlockEndTag.KhaosCoders.5743e483-e347-4815-8c9d-7fc46ca75382" Version="3.0" Language="en-US" Publisher="KhaosPrinz" />
+        <Identity Id="CodeBlockEndTag.KhaosCoders.5743e483-e347-4815-8c9d-7fc46ca75382" Version="3.1" Language="en-US" Publisher="KhaosPrinz" />
         <DisplayName>CodeBlockEndTag</DisplayName>
         <Description xml:space="preserve">Adds an end tag to each code block with information about the header / condition</Description>
         <MoreInfo>https://github.com/KhaosCoders/VSCodeBlockEndTag</MoreInfo>
@@ -26,7 +26,7 @@
         <Asset Type="Microsoft.VisualStudio.VsPackage" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%;PkgdefProjectOutputGroup|" />
     </Assets>
     <Prerequisites>
-        <Prerequisite Id="Microsoft.VisualStudio.Component.Roslyn.LanguageServices" Version="[15.0.26208.0,17.0)" DisplayName="C# and Visual Basic" />
-        <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[15.0.26208.0,17.0)" DisplayName="Visual Studio core editor" />
+        <Prerequisite Id="Microsoft.VisualStudio.Component.Roslyn.LanguageServices" Version="[15.0.26208.0,18.0)" DisplayName="C# and Visual Basic" />
+        <Prerequisite Id="Microsoft.VisualStudio.Component.CoreEditor" Version="[15.0.26208.0,18.0)" DisplayName="Visual Studio core editor" />
     </Prerequisites>
 </PackageManifest>
