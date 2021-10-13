@@ -1,4 +1,7 @@
-﻿Version 2.5:
+﻿Version 3.0:
+	Added support for VisualStudio 2022
+
+Version 2.5:
 	Fixed a NRE in CBETagger.Dispose(bool). Reported in VS 16.2.0 and 2017
 
 Version 2.4:
