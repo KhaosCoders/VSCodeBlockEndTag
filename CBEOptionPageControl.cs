@@ -13,7 +13,7 @@ namespace CodeBlockEndTag
 {
     public partial class CBEOptionPageControl : UserControl
     {
-        private const string DonateUrl = @"https://www.paypal.com/us/cgi-bin/webscr?cmd=_flow&SESSION=zy33NAY9x6TPiFGk26vXckTW9Nf1ffD_E4RDdAq3kXHpzeFaSsPIkFbZv9y&dispatch=5885d80a13c0db1f8e263663d3faee8d64813b57e559a2578463e58274899069";
+        private const string DonateUrl = @"https://www.paypal.com/donate?hosted_button_id=37PBGZPHXY8EC";
         private const string GitHubUrl = @"https://github.com/KhaosCoders/VSCodeBlockEndTag";
 
 
