@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
     <Metadata>
-        <Identity Id="CodeBlockEndTag.KhaosCoders.5743e483-e347-4815-8c9d-7fc46ca75382" Version="2.6" Language="en-US" Publisher="KhaosPrinz" />
+        <Identity Id="CodeBlockEndTag.KhaosCoders.5743e483-e347-4815-8c9d-7fc46ca75382" Version="3.0" Language="en-US" Publisher="KhaosPrinz" />
         <DisplayName>CodeBlockEndTag</DisplayName>
         <Description xml:space="preserve">Adds an end tag to each code block with information about the header / condition</Description>
         <MoreInfo>https://github.com/KhaosCoders/VSCodeBlockEndTag</MoreInfo>
@@ -14,9 +14,12 @@
     <Installation>
         <InstallationTarget Version="[15.0,17.0)" Id="Microsoft.VisualStudio.Community" />
         <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[14.0]" />
+        <InstallationTarget Version="[17.0,18.0)" Id="Microsoft.VisualStudio.Community">
+            <ProductArchitecture>amd64</ProductArchitecture>
+        </InstallationTarget>
     </Installation>
     <Dependencies>
-        <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.5,)" />
+        <Dependency Id="Microsoft.Framework.NDP" DisplayName="Microsoft .NET Framework" d:Source="Manual" Version="[4.8,)" />
     </Dependencies>
     <Assets>
         <Asset Type="Microsoft.VisualStudio.MefComponent" d:Source="Project" d:ProjectName="%CurrentProject%" Path="|%CurrentProject%|" />
