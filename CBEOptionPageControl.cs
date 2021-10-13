@@ -1,13 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using System.Diagnostics;
+using System.Windows.Forms;
 
 namespace CodeBlockEndTag
 {
@@ -44,10 +37,10 @@ namespace CodeBlockEndTag
 
             lviLanguages.Items.Clear();
             string[] langs = optionsPage.SupportedLangDisplayNames;
-            for (int i = 0; i<langs.Length; i++)
+            for (int i = 0; i < langs.Length; i++)
             {
                 lviLanguages.Items.Add(langs[i]);
-                if(optionsPage.SupportedLangActive[i])
+                if (optionsPage.SupportedLangActive[i])
                 {
                     lviLanguages.SetItemChecked(i, true);
                 }
