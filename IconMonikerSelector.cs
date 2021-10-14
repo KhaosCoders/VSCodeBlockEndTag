@@ -38,7 +38,7 @@ namespace CodeBlockEndTag
         };
 
         private delegate ImageMoniker IconSelector(string keyword, string modifier);
-        private static Dictionary<string, IconSelector> iconSelectors = new Dictionary<string, IconSelector>();
+        private static readonly Dictionary<string, IconSelector> iconSelectors = new Dictionary<string, IconSelector>();
 
         public static ImageMoniker SelectMoniker(string header)
         {
@@ -47,11 +47,10 @@ namespace CodeBlockEndTag
 
             // split words of header
             string[] words = header.Split(' ');
-            int modifierCount = 0;
             if (words.Length == 0) return icon;
 
             // find first visibility modifier
-            string modifier = GetModifier(words, out modifierCount);
+            string modifier = GetModifier(words, out int modifierCount);
             int keywordIndex = modifierCount;
             if (words.Length <= keywordIndex) return icon;
 
