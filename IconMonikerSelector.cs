@@ -1,5 +1,5 @@
 ﻿//
-// For a complete list of all KnownMonikers see 
+// For a complete list of all KnownMonikers see
 // http://glyphlist.azurewebsites.net/knownmonikers/
 //
 
@@ -10,7 +10,6 @@ using System.Collections.Generic;
 
 namespace CodeBlockEndTag
 {
-
     internal sealed class IconMonikerSelector
     {
         private const string ModifierPublic = "public";
@@ -38,7 +37,7 @@ namespace CodeBlockEndTag
         };
 
         private delegate ImageMoniker IconSelector(string keyword, string modifier);
-        private static readonly Dictionary<string, IconSelector> iconSelectors = new Dictionary<string, IconSelector>();
+        private static readonly Dictionary<string, IconSelector> iconSelectors = new();
 
         public static ImageMoniker SelectMoniker(string header)
         {
@@ -76,37 +75,37 @@ namespace CodeBlockEndTag
             // get icon by keyword
             if (iconSelectors.ContainsKey(keyword))
             {
-                icon = iconSelectors[keyword](keyword, modifier);
+                return iconSelectors[keyword](keyword, modifier);
             }
 
             // icon for lambda
             else if (header.Contains("=>"))
             {
-                icon = KnownMonikers.DelegatePublic;
+                return KnownMonikers.DelegatePublic;
             }
 
             // icon for method/ctor
             else if (words.Length - modifierCount >= 1 && header.Contains('(') && header.Contains(')'))
             {
-                switch (modifier)
+                return modifier switch
                 {
-                    case ModifierPublic: icon = KnownMonikers.MethodPublic; break;
-                    case ModifierProtected: icon = KnownMonikers.MethodProtected; break;
-                    case ModifierInternal: icon = KnownMonikers.MethodInternal; break;
-                    default: icon = KnownMonikers.MethodPrivate; break;
-                }
+                    ModifierPublic => KnownMonikers.MethodPublic,
+                    ModifierProtected => KnownMonikers.MethodProtected,
+                    ModifierInternal => KnownMonikers.MethodInternal,
+                    _ => KnownMonikers.MethodPrivate,
+                };
             }
 
             // icon for property
             else if (words.Length - modifierCount == 2)
             {
-                switch (modifier)
+                return modifier switch
                 {
-                    case ModifierPublic: icon = KnownMonikers.PropertyPublic; break;
-                    case ModifierProtected: icon = KnownMonikers.PropertyProtected; break;
-                    case ModifierInternal: icon = KnownMonikers.PropertyInternal; break;
-                    default: icon = KnownMonikers.PropertyPrivate; break;
-                }
+                    ModifierPublic => KnownMonikers.PropertyPublic,
+                    ModifierProtected => KnownMonikers.PropertyProtected,
+                    ModifierInternal => KnownMonikers.PropertyInternal,
+                    _ => KnownMonikers.PropertyPrivate,
+                };
             }
 
             return icon;
@@ -114,99 +113,96 @@ namespace CodeBlockEndTag
 
         private static void InitIconSelectors()
         {
-            iconSelectors.Add("namespace", new IconSelector((keyword, modifier) => KnownMonikers.Namespace));
-            iconSelectors.Add("class", new IconSelector((keyword, modifier) =>
+            iconSelectors.Add("namespace", new IconSelector((_, __) => KnownMonikers.Namespace));
+            iconSelectors.Add("class", new IconSelector((_, modifier) =>
             {
-                switch (modifier)
+                return modifier switch
                 {
-                    case ModifierPublic: return KnownMonikers.ClassPublic;
-                    case ModifierPrivate: return KnownMonikers.ClassPrivate;
-                    case ModifierProtected: return KnownMonikers.ClassProtected;
-                    default: return KnownMonikers.ClassInternal;
-                }
+                    ModifierPublic => KnownMonikers.ClassPublic,
+                    ModifierPrivate => KnownMonikers.ClassPrivate,
+                    ModifierProtected => KnownMonikers.ClassProtected,
+                    _ => KnownMonikers.ClassInternal,
+                };
             }));
-            iconSelectors.Add("struct", new IconSelector((keyword, modifier) =>
+            iconSelectors.Add("struct", new IconSelector((_, modifier) =>
             {
-                switch (modifier)
+                return modifier switch
                 {
-                    case ModifierPublic: return KnownMonikers.StructurePublic;
-                    case ModifierPrivate: return KnownMonikers.StructurePrivate;
-                    case ModifierProtected: return KnownMonikers.StructureProtected;
-                    default: return KnownMonikers.StructureInternal;
-                }
+                    ModifierPublic => KnownMonikers.StructurePublic,
+                    ModifierPrivate => KnownMonikers.StructurePrivate,
+                    ModifierProtected => KnownMonikers.StructureProtected,
+                    _ => KnownMonikers.StructureInternal,
+                };
             }));
-            iconSelectors.Add("enum", new IconSelector((keyword, modifier) =>
+            iconSelectors.Add("enum", new IconSelector((_, modifier) =>
             {
-                switch (modifier)
+                return modifier switch
                 {
-                    case ModifierPublic: return KnownMonikers.EnumerationPublic;
-                    case ModifierPrivate: return KnownMonikers.EnumerationPrivate;
-                    case ModifierProtected: return KnownMonikers.EnumerationProtected;
-                    default: return KnownMonikers.EnumerationInternal;
-                }
+                    ModifierPublic => KnownMonikers.EnumerationPublic,
+                    ModifierPrivate => KnownMonikers.EnumerationPrivate,
+                    ModifierProtected => KnownMonikers.EnumerationProtected,
+                    _ => KnownMonikers.EnumerationInternal,
+                };
             }));
-            iconSelectors.Add("interface", new IconSelector((keyword, modifier) =>
+            iconSelectors.Add("interface", new IconSelector((_, modifier) =>
             {
-                switch (modifier)
+                return modifier switch
                 {
-                    case ModifierPublic: return KnownMonikers.InterfacePublic;
-                    case ModifierPrivate: return KnownMonikers.InterfacePrivate;
-                    case ModifierProtected: return KnownMonikers.InterfaceProtected;
-                    default: return KnownMonikers.InterfaceInternal;
-                }
+                    ModifierPublic => KnownMonikers.InterfacePublic,
+                    ModifierPrivate => KnownMonikers.InterfacePrivate,
+                    ModifierProtected => KnownMonikers.InterfaceProtected,
+                    _ => KnownMonikers.InterfaceInternal,
+                };
             }));
-            iconSelectors.Add("event", new IconSelector((keyword, modifier) =>
+            iconSelectors.Add("event", new IconSelector((_, modifier) =>
             {
-                switch (modifier)
+                return modifier switch
                 {
-                    case ModifierPublic: return KnownMonikers.EventPublic;
-                    case ModifierInternal: return KnownMonikers.EventInternal;
-                    case ModifierProtected: return KnownMonikers.EventProtected;
-                    default: return KnownMonikers.EventPrivate;
-                }
+                    ModifierPublic => KnownMonikers.EventPublic,
+                    ModifierInternal => KnownMonikers.EventInternal,
+                    ModifierProtected => KnownMonikers.EventProtected,
+                    _ => KnownMonikers.EventPrivate,
+                };
             }));
-            iconSelectors.Add("if", new IconSelector((keyword, modifier) => KnownMonikers.If));
-            iconSelectors.Add("else", new IconSelector((keyword, modifier) => KnownMonikers.If));
-            iconSelectors.Add("do", new IconSelector((keyword, modifier) => KnownMonikers.DoWhile));
-            iconSelectors.Add("while", new IconSelector((keyword, modifier) => KnownMonikers.While));
-            iconSelectors.Add("for", new IconSelector((keyword, modifier) => KnownMonikers.ForEachLoop));
-            iconSelectors.Add("foreach", new IconSelector((keyword, modifier) => KnownMonikers.ForEachLoop));
-            iconSelectors.Add("typedef", new IconSelector((keyword, modifier) => KnownMonikers.TypeDefinition));
-            iconSelectors.Add("new", new IconSelector((keyword, modifier) => KnownMonikers.NewItem));
-            iconSelectors.Add("switch", new IconSelector((keyword, modifier) => KnownMonikers.FlowSwitch));
-            iconSelectors.Add("try", new IconSelector((keyword, modifier) => KnownMonikers.TryCatch));
-            iconSelectors.Add("catch", new IconSelector((keyword, modifier) => KnownMonikers.TryCatch));
-            iconSelectors.Add("finally", new IconSelector((keyword, modifier) => KnownMonikers.FinalState));
-            iconSelectors.Add("unsafe", new IconSelector((keyword, modifier) => KnownMonikers.HotSpot));
-            iconSelectors.Add("using", new IconSelector((keyword, modifier) => KnownMonikers.RectangleSelection));
-            iconSelectors.Add("lock", new IconSelector((keyword, modifier) => KnownMonikers.Lock));
-            iconSelectors.Add("add", new IconSelector((keyword, modifier) => KnownMonikers.AddEvent));
-            iconSelectors.Add("remove", new IconSelector((keyword, modifier) => KnownMonikers.EventMissing));
-            iconSelectors.Add("get", new IconSelector((keyword, modifier) => KnownMonikers.ReturnParameter));
-            iconSelectors.Add("set", new IconSelector((keyword, modifier) => KnownMonikers.InsertParameter));
+            iconSelectors.Add("if", new IconSelector((_, __) => KnownMonikers.If));
+            iconSelectors.Add("else", new IconSelector((_, __) => KnownMonikers.If));
+            iconSelectors.Add("do", new IconSelector((_, __) => KnownMonikers.DoWhile));
+            iconSelectors.Add("while", new IconSelector((_, __) => KnownMonikers.While));
+            iconSelectors.Add("for", new IconSelector((_, __) => KnownMonikers.ForEachLoop));
+            iconSelectors.Add("foreach", new IconSelector((_, __) => KnownMonikers.ForEachLoop));
+            iconSelectors.Add("typedef", new IconSelector((_, __) => KnownMonikers.TypeDefinition));
+            iconSelectors.Add("new", new IconSelector((__, _) => KnownMonikers.NewItem));
+            iconSelectors.Add("switch", new IconSelector((_, __) => KnownMonikers.FlowSwitch));
+            iconSelectors.Add("try", new IconSelector((_, __) => KnownMonikers.TryCatch));
+            iconSelectors.Add("catch", new IconSelector((_, __) => KnownMonikers.TryCatch));
+            iconSelectors.Add("finally", new IconSelector((_, __) => KnownMonikers.FinalState));
+            iconSelectors.Add("unsafe", new IconSelector((_, __) => KnownMonikers.HotSpot));
+            iconSelectors.Add("using", new IconSelector((_, __) => KnownMonikers.RectangleSelection));
+            iconSelectors.Add("lock", new IconSelector((_, __) => KnownMonikers.Lock));
+            iconSelectors.Add("add", new IconSelector((_, __) => KnownMonikers.AddEvent));
+            iconSelectors.Add("remove", new IconSelector((_, __) => KnownMonikers.EventMissing));
+            iconSelectors.Add("get", new IconSelector((_, __) => KnownMonikers.ReturnParameter));
+            iconSelectors.Add("set", new IconSelector((_, __) => KnownMonikers.InsertParameter));
 
             // C/C++ Icons
-            iconSelectors.Add("union", new IconSelector((keyword, modifier) => KnownMonikers.Union));
-            iconSelectors.Add("template", new IconSelector((keyword, modifier) => KnownMonikers.Template));
-            iconSelectors.Add("synchronized", new IconSelector((keyword, modifier) => KnownMonikers.SynchronousMessage));
+            iconSelectors.Add("union", new IconSelector((_, __) => KnownMonikers.Union));
+            iconSelectors.Add("template", new IconSelector((_, __) => KnownMonikers.Template));
+            iconSelectors.Add("synchronized", new IconSelector((_, __) => KnownMonikers.SynchronousMessage));
 
             // PowerShell
-            iconSelectors.Add("elseif", new IconSelector((keyword, modifier) => KnownMonikers.If));
-            iconSelectors.Add("begin", new IconSelector((keyword, modifier) => KnownMonikers.StartPoint));
-            iconSelectors.Add("process", new IconSelector((keyword, modifier) => KnownMonikers.Action));
-            iconSelectors.Add("end", new IconSelector((keyword, modifier) => KnownMonikers.EndPoint));
-            iconSelectors.Add("data", new IconSelector((keyword, modifier) => KnownMonikers.DataList));
-            iconSelectors.Add("dynamicparam", new IconSelector((keyword, modifier) => KnownMonikers.NewParameter));
-            iconSelectors.Add("filter", new IconSelector((keyword, modifier) => KnownMonikers.Filter));
-            iconSelectors.Add("function", new IconSelector((keyword, modifier) => KnownMonikers.MethodPublic));
-            iconSelectors.Add("workflow", new IconSelector((keyword, modifier) => KnownMonikers.WorkflowInterop));
-            iconSelectors.Add("inlinescript", new IconSelector((keyword, modifier) => KnownMonikers.Inline));
-            iconSelectors.Add("parallel", new IconSelector((keyword, modifier) => KnownMonikers.Parallel));
-            iconSelectors.Add("sequence", new IconSelector((keyword, modifier) => KnownMonikers.Sequence));
-            iconSelectors.Add("trap", new IconSelector((keyword, modifier) => KnownMonikers.TryCatch));
-
-
-
+            iconSelectors.Add("elseif", new IconSelector((_, __) => KnownMonikers.If));
+            iconSelectors.Add("begin", new IconSelector((_, __) => KnownMonikers.StartPoint));
+            iconSelectors.Add("process", new IconSelector((_, __) => KnownMonikers.Action));
+            iconSelectors.Add("end", new IconSelector((_, __) => KnownMonikers.EndPoint));
+            iconSelectors.Add("data", new IconSelector((_, __) => KnownMonikers.DataList));
+            iconSelectors.Add("dynamicparam", new IconSelector((_, __) => KnownMonikers.NewParameter));
+            iconSelectors.Add("filter", new IconSelector((_, __) => KnownMonikers.Filter));
+            iconSelectors.Add("function", new IconSelector((_, __) => KnownMonikers.MethodPublic));
+            iconSelectors.Add("workflow", new IconSelector((_, __) => KnownMonikers.WorkflowInterop));
+            iconSelectors.Add("inlinescript", new IconSelector((_, __) => KnownMonikers.Inline));
+            iconSelectors.Add("parallel", new IconSelector((_, __) => KnownMonikers.Parallel));
+            iconSelectors.Add("sequence", new IconSelector((_, __) => KnownMonikers.Sequence));
+            iconSelectors.Add("trap", new IconSelector((_, __) => KnownMonikers.TryCatch));
         }
 
         private static string GetModifier(string[] words, out int modifierCount)
@@ -226,6 +222,5 @@ namespace CodeBlockEndTag
             }
             return modifier;
         }
-
     }
 }

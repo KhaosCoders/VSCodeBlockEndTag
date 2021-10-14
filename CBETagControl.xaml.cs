@@ -1,10 +1,6 @@
 ﻿using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Imaging.Interop;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -17,42 +13,37 @@ namespace CodeBlockEndTag
     /// </summary>
     public partial class CBETagControl : UserControl
     {
-
         public string Text
         {
-            get { return (string)GetValue(TextProperty); }
-            set { SetValue(TextProperty, value); }
+            get => (string)GetValue(TextProperty);
+            set => SetValue(TextProperty, value);
         }
         public static readonly DependencyProperty TextProperty =
             DependencyProperty.Register("Text", typeof(string), typeof(CBETagControl), new PropertyMetadata("Unkown"));
 
-
         public ImageMoniker IconMoniker
         {
-            get { return (ImageMoniker)GetValue(IconMonikerProperty); }
-            set { SetValue(IconMonikerProperty, value); }
+            get => (ImageMoniker)GetValue(IconMonikerProperty);
+            set => SetValue(IconMonikerProperty, value);
         }
         public static readonly DependencyProperty IconMonikerProperty =
             DependencyProperty.Register("IconMoniker", typeof(ImageMoniker), typeof(CBETagControl), new PropertyMetadata(KnownMonikers.QuestionMark));
 
-
         public int DisplayMode
         {
-            get { return (int)GetValue(DisplayModeProperty); }
-            set { SetValue(DisplayModeProperty, value); }
+            get => (int)GetValue(DisplayModeProperty);
+            set => SetValue(DisplayModeProperty, value);
         }
         public static readonly DependencyProperty DisplayModeProperty =
             DependencyProperty.Register("DisplayMode", typeof(int), typeof(CBETagControl), new PropertyMetadata(0));
 
-
         public double LineHeight
         {
-            get { return (double)GetValue(LineHeightProperty); }
-            set { SetValue(LineHeightProperty, value); }
+            get => (double)GetValue(LineHeightProperty);
+            set => SetValue(LineHeightProperty, value);
         }
         public static readonly DependencyProperty LineHeightProperty =
             DependencyProperty.Register("LineHeight", typeof(double), typeof(CBETagControl), new PropertyMetadata(9d));
-
 
         internal CBAdornmentData AdornmentData { get; set; }
 
@@ -76,8 +67,7 @@ namespace CodeBlockEndTag
             else
             {
                 TextBlock tb = btnTag.Template.FindName("txtTag", btnTag) as TextBlock;
-                Size size = new Size(8 + LineHeight + (tb?.ActualWidth ?? 0) + paddingRight, LineHeight);
-                return size;
+                return new Size(8 + LineHeight + (tb?.ActualWidth ?? 0) + paddingRight, LineHeight);
             }
         }
 
@@ -115,20 +105,12 @@ namespace CodeBlockEndTag
 
         private void ButtonClicked(int clickCount)
         {
-            int neededClickCount = 0;
-            switch (CBETagPackage.CBEClickMode)
+            int neededClickCount = CBETagPackage.CBEClickMode switch
             {
-                case (int)CBEOptionPage.ClickMode.SingleClick:
-                    neededClickCount = 1;
-                    break;
-                case (int)CBEOptionPage.ClickMode.CtrlClick:
-                    neededClickCount = 1;
-                    break;
-                case (int)CBEOptionPage.ClickMode.DoubleClick:
-                    neededClickCount = 2;
-                    break;
-            }
-
+                (int)CBEOptionPage.ClickMode.SingleClick or (int)CBEOptionPage.ClickMode.CtrlClick => 1,
+                (int)CBEOptionPage.ClickMode.DoubleClick => 2,
+                _ => 0,
+            };
             if (AdornmentData != null)
             {
                 bool jumpToHead = (clickCount >= neededClickCount) && buttonModifiersPressed;
@@ -138,17 +120,9 @@ namespace CodeBlockEndTag
 
         private bool CheckModifiers()
         {
-            Key modifier = Key.None;
-            Key altModifier = Key.None;
-            switch (CBETagPackage.CBEClickMode)
-            {
-                case (int)CBEOptionPage.ClickMode.CtrlClick:
-                    modifier = Key.LeftCtrl;
-                    altModifier = Key.RightCtrl;
-                    break;
-            }
-            return (modifier == Key.None || Keyboard.IsKeyDown(modifier) || (altModifier != Key.None && Keyboard.IsKeyDown(altModifier)));
+            return CBETagPackage.CBEClickMode != (int)CBEOptionPage.ClickMode.CtrlClick
+                || Keyboard.IsKeyDown(Key.LeftCtrl)
+                || Keyboard.IsKeyDown(Key.RightCtrl);
         }
-
     }
 }

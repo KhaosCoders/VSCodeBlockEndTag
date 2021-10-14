@@ -1,15 +1,10 @@
 ﻿using Microsoft.VisualStudio.Text;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CodeBlockEndTag
 {
-    static class Extensions
+    internal static class Extensions
     {
-
         /// <summary>
         /// Joins another span with the current one
         /// </summary>
@@ -19,6 +14,5 @@ namespace CodeBlockEndTag
             int end = Math.Max(s1.End, span.End);
             return new Span(start, end - start);
         }
-
     }
 }

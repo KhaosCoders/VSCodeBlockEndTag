@@ -12,8 +12,7 @@ using Microsoft.VisualStudio.Editor;
 
 namespace CodeBlockEndTag
 {
-
-    /// <summary> 
+    /// <summary>
     /// This tagger provides editor tags that are inserted into the TextView (IntraTextAdornmentTags)
     /// The tags are added after each code block encapsulated by curly bracets: { ... }
     /// The tags will show the code blocks condition, or whatever serves as header for the block
@@ -22,53 +21,47 @@ namespace CodeBlockEndTag
     internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     {
         private static readonly ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>> EmptyTagColllection =
-            new ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>>(new List<ITagSpan<IntraTextAdornmentTag>>());
+            new(new List<ITagSpan<IntraTextAdornmentTag>>());
 
         #region Properties & Fields
 
         // EventHandler for ITagger<IntraTextAdornmentTag> tags changed event
-        EventHandler<SnapshotSpanEventArgs> _changedEvent;
-
-        /// <summary>
-        /// Service by VisualStudio for fast searches in texts 
-        /// </summary>
-        readonly ITextSearchService _TextSearchService;
+        private EventHandler<SnapshotSpanEventArgs> _changedEvent;
 
         /// <summary>
         /// Service by VisualStudio for fast navigation in structured texts
         /// </summary>
-        readonly ITextStructureNavigator _TextStructureNavigator;
+        private readonly ITextStructureNavigator _TextStructureNavigator;
 
         /// <summary>
         /// The TextView this tagger is assigned to
         /// </summary>
-        readonly IWpfTextView _TextView;
+        private readonly IWpfTextView _TextView;
 
         /// <summary>
         /// This is a list of already created adornment tags used as cache
         /// </summary>
-        readonly List<CBAdornmentData> _adornmentCache = new List<CBAdornmentData>();
-
+        private readonly List<CBAdornmentData> _adornmentCache = new();
 
         /// <summary>
         /// Used to get the editor font size
         /// </summary>
-        readonly IVsFontsAndColorsInformation _VSFontsInformation;
+        private readonly IVsFontsAndColorsInformation _VSFontsInformation;
 
         /// <summary>
         /// FontSize used by tags
         /// </summary>
-        double _FontSize = 9;
+        private double _FontSize = 9;
 
         /// <summary>
         /// This is the visible span of the textview
         /// </summary>
-        Span? _VisibleSpan;
+        private Span? _VisibleSpan;
 
         /// <summary>
         /// Is set, when the instance is disposed
         /// </summary>
-        bool _Disposed { get; set; }
+        private bool _Disposed;
 
         #endregion
 
@@ -89,7 +82,6 @@ namespace CodeBlockEndTag
 
             // Getting services provided by VisualStudio
             _TextStructureNavigator = provider.GetTextStructureNavigator(_TextView.TextBuffer);
-            _TextSearchService = provider.TextSearchService;
             _VSFontsInformation = TryGetFontAndColorInfo(provider.VsFontsAndColorsInformationService);
 
             // Hook up events
@@ -103,7 +95,7 @@ namespace CodeBlockEndTag
             if (_VSFontsInformation != null)
             {
                 ReloadFontSize();
-                _VSFontsInformation.Updated += _VSFontsInformation_Updated;
+                _VSFontsInformation.Updated += VSFontsInformation_Updated;
             }
         }
 
@@ -139,7 +131,7 @@ namespace CodeBlockEndTag
                 catch { }
             }
         }
-        private void _VSFontsInformation_Updated(object sender, EventArgs e)
+        private void VSFontsInformation_Updated(object sender, EventArgs e)
         {
             ReloadFontSize();
         }
@@ -158,7 +150,7 @@ namespace CodeBlockEndTag
             }
         }
 
-        void TextBuffer_Changed(object sender, TextContentChangedEventArgs e)
+        private void TextBuffer_Changed(object sender, TextContentChangedEventArgs e)
         {
             foreach (var textChange in e.Changes)
             {
@@ -166,14 +158,16 @@ namespace CodeBlockEndTag
             }
         }
 
-        void OnTextChanged(ITextChange textChange)
+        private void OnTextChanged(ITextChange textChange)
         {
             // remove or update tags in adornment cache
-            List<CBAdornmentData> remove = new List<CBAdornmentData>();
+            List<CBAdornmentData> remove = new();
             foreach (var adornment in _adornmentCache)
             {
                 if (!(adornment.HeaderStartPosition > textChange.OldEnd || adornment.EndPosition < textChange.OldPosition))
+                {
                     remove.Add(adornment);
+                }
                 else if (adornment.HeaderStartPosition > textChange.OldEnd)
                 {
                     adornment.HeaderStartPosition += textChange.Delta;
@@ -190,8 +184,7 @@ namespace CodeBlockEndTag
 
         private void RemoveFromCache(CBAdornmentData adornment)
         {
-            var tag = adornment.Adornment as CBETagControl;
-            if (tag != null)
+            if (adornment.Adornment is CBETagControl tag)
             {
                 tag.TagClicked -= Adornment_TagClicked;
             }
@@ -256,7 +249,7 @@ namespace CodeBlockEndTag
         }
 
 #if DEBUG
-        System.Diagnostics.Stopwatch watch;
+        private System.Diagnostics.Stopwatch _watch;
 #endif
         private ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>> GetTagsCore(SnapshotSpan span)
         {
@@ -280,9 +273,8 @@ namespace CodeBlockEndTag
 
 #if DEBUG
             // Stop time
-            if (watch == null)
-                watch = new System.Diagnostics.Stopwatch();
-            watch.Restart();
+            _watch ??= new System.Diagnostics.Stopwatch();
+            _watch.Restart();
 #endif
 
             try
@@ -309,7 +301,7 @@ namespace CodeBlockEndTag
                                         // Every tag until now was inside a comment
                                         foreach (var tag in list)
                                         {
-                                            RemoveFromCache((tag.Tag.Adornment as CBETagControl).AdornmentData);
+                                            RemoveFromCache((tag.Tag.Adornment as CBETagControl)?.AdornmentData);
                                         }
                                         list.Clear();
                                     }
@@ -336,7 +328,7 @@ namespace CodeBlockEndTag
                     cbEndPosition = position;
                     if (position >= 0 && snapshot[position - 1] == '{')
                     {
-                        // empty code block {} 
+                        // empty code block {}
                         cbStartPosition = position - 1;
                         cbSpan = new SnapshotSpan(snapshot, cbStartPosition, cbEndPosition - cbStartPosition);
                     }
@@ -351,7 +343,7 @@ namespace CodeBlockEndTag
                     if (!snapshot.GetText(cbSpan).Contains('\n'))
                         continue;
 
-                    // getting the code blocks header 
+                    // getting the code blocks header
                     cbHeaderPosition = -1;
                     if (snapshot[cbStartPosition] == '{')
                     {
@@ -365,7 +357,7 @@ namespace CodeBlockEndTag
                     }
 
                     // Trim header
-                    if (cbHeader != null && cbHeader.Length > 0)
+                    if (!string.IsNullOrEmpty(cbHeader))
                     {
                         cbHeader = cbHeader.Trim()
                             .Replace(Environment.NewLine, "")
@@ -379,7 +371,9 @@ namespace CodeBlockEndTag
 
                     // Skip tag if option "only when header not visible"
                     if (_VisibleSpan != null && !IsTagVisible(cbHeaderPosition, cbEndPosition, _VisibleSpan, snapshot))
+                    {
                         continue;
+                    }
 
                     var iconMoniker = Microsoft.VisualStudio.Imaging.KnownMonikers.QuestionMark;
                     if (CBETagPackage.CBEDisplayMode != (int)CBEOptionPage.DisplayModes.Text &&
@@ -390,10 +384,9 @@ namespace CodeBlockEndTag
 
                     // use cache or create new tag
                     cbAdornmentData = _adornmentCache
-                                        .Where(o =>
+                                        .Find(o =>
                                             o.StartPosition == cbStartPosition &&
-                                            o.EndPosition == cbEndPosition)
-                                        .FirstOrDefault();
+                                            o.EndPosition == cbEndPosition);
 
                     if (cbAdornmentData?.Adornment != null)
                     {
@@ -431,10 +424,10 @@ namespace CodeBlockEndTag
             }
 
 #if DEBUG
-            watch.Stop();
-            if (watch.Elapsed.Milliseconds > 100)
+            _watch.Stop();
+            if (_watch.Elapsed.Milliseconds > 100)
             {
-                System.Diagnostics.Debug.WriteLine("Time elapsed: " + watch.Elapsed +
+                System.Diagnostics.Debug.WriteLine("Time elapsed: " + _watch.Elapsed +
                     " on Thread: " + System.Threading.Thread.CurrentThread.ManagedThreadId +
                     " in Span: " + span.Start.Position + ":" + span.End.Position + " length: " + span.Length);
             }
@@ -447,10 +440,13 @@ namespace CodeBlockEndTag
         /// Capture the header of a code block
         /// Returns the text and outputs the start position within the snapshot
         /// </summary>
-        string GetCodeBlockHeader(SnapshotSpan cbSpan, out int headerStart, int maxEndPosition = 0)
+        private string GetCodeBlockHeader(SnapshotSpan cbSpan, out int headerStart, int maxEndPosition = 0)
         {
             if (maxEndPosition == 0)
+            {
                 maxEndPosition = cbSpan.Start;
+            }
+
             var snapshot = cbSpan.Snapshot;
             var currentSpan = cbSpan;
 
@@ -486,7 +482,7 @@ namespace CodeBlockEndTag
                 //&& (char.IsLetter(headerText[0]) || headerText[0]=='[' || headerText.Contains("=>")))
                 {
                     // recognize "else if" too
-                    if (headerText.StartsWith("if") && ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != null))
+                    if (headerText.StartsWith("if") && ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != default))
                     {
                         // check what comes before the "if"
                         headerSpan2 = new Span(currentSpan.Start, Math.Min(maxEndPosition, currentSpan.Span.End) - currentSpan.Start);
@@ -527,13 +523,12 @@ namespace CodeBlockEndTag
                 }
 
                 // get next enclosing span of current span
-            } while ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != null);
+            } while ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != default);
 
             // No header found
             headerStart = -1;
             return null;
         }
-
 
         #endregion
 
@@ -546,7 +541,7 @@ namespace CodeBlockEndTag
         {
             if (_TextView != null)
             {
-                SnapshotPoint targetPoint = new SnapshotPoint();
+                SnapshotPoint targetPoint;
                 if (jumpToHead)
                 {
                     // Jump to header
@@ -571,7 +566,7 @@ namespace CodeBlockEndTag
         /// </summary>
         private void OnPackageOptionChanged(object sender)
         {
-            int start = Math.Max(0, _VisibleSpan.HasValue ? _VisibleSpan.Value.Start : 0);
+            int start = Math.Max(0, (_VisibleSpan?.Start) ?? 0);
             int end = Math.Max(1, _VisibleSpan.HasValue ? _VisibleSpan.Value.End : 1);
             InvalidateSpan(new Span(start, end - start));
         }
@@ -669,12 +664,14 @@ namespace CodeBlockEndTag
             // Check general condition
             if (CBETagPackage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always
                 || visibleSpan == null || !visibleSpan.HasValue)
+            {
                 isVisible = true;
+            }
             // Check visible span
             if (!isVisible)
             {
                 var val = visibleSpan.Value;
-                isVisible = (start < val.Start && end >= val.Start && end <= val.End);
+                isVisible = start < val.Start && end >= val.Start && end <= val.End;
             }
             // Check if caret is in this line
             if (isVisible && _TextView != null)
@@ -713,7 +710,6 @@ namespace CodeBlockEndTag
             return null;
         }
 
-
         #endregion
 
         #region TextView scrolling
@@ -731,7 +727,7 @@ namespace CodeBlockEndTag
                 _VisibleSpan.Value.End < visibleSpan.Value.End)
             {
                 // invalidate new and/or old visible span
-                List<Span> invalidSpans = new List<Span>();
+                List<Span> invalidSpans = new();
                 var newSpan = visibleSpan.Value;
                 if (!_VisibleSpan.HasValue)
                 {

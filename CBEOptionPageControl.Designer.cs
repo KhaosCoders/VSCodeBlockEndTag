@@ -68,7 +68,7 @@
             this.chkCBETaggerEnabled.TabIndex = 1;
             this.chkCBETaggerEnabled.Text = "enable CodeBlock End Tagger";
             this.chkCBETaggerEnabled.UseVisualStyleBackColor = true;
-            this.chkCBETaggerEnabled.CheckedChanged += new System.EventHandler(this.chkCBETaggerEnabled_CheckedChanged);
+            this.chkCBETaggerEnabled.CheckedChanged += new System.EventHandler(this.ChkCBETaggerEnabled_CheckedChanged);
             // 
             // cntVisibilityMode
             // 
@@ -91,7 +91,7 @@
             this.rdbHeaderInvisible.TabStop = true;
             this.rdbHeaderInvisible.Text = "When header not visible";
             this.rdbHeaderInvisible.UseVisualStyleBackColor = true;
-            this.rdbHeaderInvisible.CheckedChanged += new System.EventHandler(this.rdbHeaderInvisible_CheckedChanged);
+            this.rdbHeaderInvisible.CheckedChanged += new System.EventHandler(this.RdbHeaderInvisible_CheckedChanged);
             // 
             // rdbAlways
             // 
@@ -103,7 +103,7 @@
             this.rdbAlways.TabStop = true;
             this.rdbAlways.Text = "Always";
             this.rdbAlways.UseVisualStyleBackColor = true;
-            this.rdbAlways.CheckedChanged += new System.EventHandler(this.rdbAlways_CheckedChanged);
+            this.rdbAlways.CheckedChanged += new System.EventHandler(this.RdbAlways_CheckedChanged);
             // 
             // cntNavigateMode
             // 
@@ -127,7 +127,7 @@
             this.rdbCtrlClick.TabStop = true;
             this.rdbCtrlClick.Text = "CTRL+Click";
             this.rdbCtrlClick.UseVisualStyleBackColor = true;
-            this.rdbCtrlClick.CheckedChanged += new System.EventHandler(this.rdbCtrlClick_CheckedChanged);
+            this.rdbCtrlClick.CheckedChanged += new System.EventHandler(this.RdbCtrlClick_CheckedChanged);
             // 
             // rdbDoubleClick
             // 
@@ -139,7 +139,7 @@
             this.rdbDoubleClick.TabStop = true;
             this.rdbDoubleClick.Text = "Double-Click";
             this.rdbDoubleClick.UseVisualStyleBackColor = true;
-            this.rdbDoubleClick.CheckedChanged += new System.EventHandler(this.rdbDoubleClick_CheckedChanged);
+            this.rdbDoubleClick.CheckedChanged += new System.EventHandler(this.RdbDoubleClick_CheckedChanged);
             // 
             // rdbSingleClick
             // 
@@ -151,7 +151,7 @@
             this.rdbSingleClick.TabStop = true;
             this.rdbSingleClick.Text = "Single-Click";
             this.rdbSingleClick.UseVisualStyleBackColor = true;
-            this.rdbSingleClick.CheckedChanged += new System.EventHandler(this.rdbSingleClick_CheckedChanged);
+            this.rdbSingleClick.CheckedChanged += new System.EventHandler(this.RdbSingleClick_CheckedChanged);
             // 
             // cntDisplayMode
             // 
@@ -175,7 +175,7 @@
             this.rdbTextOnly.TabStop = true;
             this.rdbTextOnly.Text = "Text only";
             this.rdbTextOnly.UseVisualStyleBackColor = true;
-            this.rdbTextOnly.CheckedChanged += new System.EventHandler(this.rdbTextOnly_CheckedChanged);
+            this.rdbTextOnly.CheckedChanged += new System.EventHandler(this.RdbTextOnly_CheckedChanged);
             // 
             // rdbIconOnly
             // 
@@ -187,7 +187,7 @@
             this.rdbIconOnly.TabStop = true;
             this.rdbIconOnly.Text = "Icon only";
             this.rdbIconOnly.UseVisualStyleBackColor = true;
-            this.rdbIconOnly.CheckedChanged += new System.EventHandler(this.rdbIconOnly_CheckedChanged);
+            this.rdbIconOnly.CheckedChanged += new System.EventHandler(this.RdbIconOnly_CheckedChanged);
             // 
             // rdbIconAndText
             // 
@@ -199,7 +199,7 @@
             this.rdbIconAndText.TabStop = true;
             this.rdbIconAndText.Text = "Icon and Text";
             this.rdbIconAndText.UseVisualStyleBackColor = true;
-            this.rdbIconAndText.CheckedChanged += new System.EventHandler(this.rdbIconAndText_CheckedChanged);
+            this.rdbIconAndText.CheckedChanged += new System.EventHandler(this.RdbIconAndText_CheckedChanged);
             // 
             // cntInfo
             // 
@@ -223,7 +223,7 @@
             this.lblLink.TabIndex = 1;
             this.lblLink.TabStop = true;
             this.lblLink.Text = "PayPal Donation";
-            this.lblLink.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lblLink_LinkClicked);
+            this.lblLink.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.LblLink_LinkClicked);
             // 
             // lblInfo
             // 
@@ -259,7 +259,7 @@
             this.lviLanguages.Name = "lviLanguages";
             this.lviLanguages.Size = new System.Drawing.Size(176, 214);
             this.lviLanguages.TabIndex = 11;
-            this.lviLanguages.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.lviLanguages_ItemCheck);
+            this.lviLanguages.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.LviLanguages_ItemCheck);
             // 
             // lnkGitHub
             // 
@@ -272,7 +272,7 @@
             this.lnkGitHub.TabIndex = 12;
             this.lnkGitHub.TabStop = true;
             this.lnkGitHub.Text = "Visit on GitHub";
-            this.lnkGitHub.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.lnkGitHub_LinkClicked);
+            this.lnkGitHub.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.LnkGitHub_LinkClicked);
             // 
             // lblSuggestMore
             // 
@@ -303,7 +303,7 @@
             this.tbrTagSize.Size = new System.Drawing.Size(130, 45);
             this.tbrTagSize.TabIndex = 12;
             this.tbrTagSize.Value = 8;
-            this.tbrTagSize.ValueChanged += new System.EventHandler(this.tbrTagSize_ValueChanged);
+            this.tbrTagSize.ValueChanged += new System.EventHandler(this.TbrTagSize_ValueChanged);
             // 
             // lblTagSize
             // 

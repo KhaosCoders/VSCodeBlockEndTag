@@ -10,12 +10,11 @@ using System.Windows.Threading;
 
 namespace CodeBlockEndTag
 {
-
     [Guid("B009CDB7-6900-47DC-8403-285191252811")]
     public class CBEOptionPage : DialogPage
     {
         // Name of settings collection where bit array is stored
-        const string collectionName = "CodeBlockEndTag";
+        private const string collectionName = "CodeBlockEndTag";
 
         public delegate void OptionChangedHandler(object sender);
         public event OptionChangedHandler OptionChanged;
@@ -23,14 +22,14 @@ namespace CodeBlockEndTag
         public CBEOptionPage()
         {
             // default: all languages are enabled
-            SupportedLangActive = _supportedLangs.Select(l => true).ToArray();
+            SupportedLangActive = _supportedLangs.Select(_ => true).ToArray();
         }
 
         #region supported languages
 
-        // List of all supported languages 
+        // List of all supported languages
         // Never remove any! User preferences are stored for each array position
-        private SupportedLang[] _supportedLangs = new SupportedLang[]
+        private readonly SupportedLang[] _supportedLangs = new SupportedLang[]
         {
             new SupportedLang() { Name = "CSharp",       DisplayName = "CSharp C#" },
             /*
@@ -203,7 +202,7 @@ namespace CodeBlockEndTag
 
         #endregion
 
-        #region save / load 
+        #region save / load
 
         public override void SaveSettingsToStorage()
         {
@@ -241,14 +240,13 @@ namespace CodeBlockEndTag
                 userSettingsStore.GetString(collectionName, nameof(SupportedLangActive))) as bool[];
         }
 
-
         #endregion
 
         protected override IWin32Window Window
         {
             get
             {
-                CBEOptionPageControl page = new CBEOptionPageControl();
+                CBEOptionPageControl page = new();
                 page.optionsPage = this;
                 page.Initialize();
                 return page;

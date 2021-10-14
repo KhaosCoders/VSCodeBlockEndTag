@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace CodeBlockEndTag
 {
-    class BoolArrayConverter : TypeConverter
+    internal class BoolArrayConverter : TypeConverter
     {
         public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
         {
@@ -19,24 +19,20 @@ namespace CodeBlockEndTag
 
         public override object ConvertFrom(ITypeDescriptorContext context, CultureInfo culture, object value)
         {
-            string v = value as string;
             // Bit string to bool array
-            return v == null ? 
-                base.ConvertFrom(context, culture, value) : 
-                v.ToCharArray().Select(chr => chr=='1').ToArray();
+            return value is not string v ?
+                base.ConvertFrom(context, culture, value) :
+                v.ToCharArray().Select(chr => chr == '1').ToArray();
         }
 
         public override object ConvertTo(ITypeDescriptorContext context, CultureInfo culture, object value, Type destinationType)
         {
-            bool[] v = value as bool[];
-            if (destinationType != typeof(string) || v == null)
+            if (destinationType != typeof(string) || value is not bool[] v)
             {
                 return base.ConvertTo(context, culture, value, destinationType);
             }
             // bool array to bit string
             return string.Join("", v.Select(b => b ? '1' : '0'));
         }
-
     }
-
 }

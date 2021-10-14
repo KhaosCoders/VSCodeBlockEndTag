@@ -10,7 +10,6 @@ namespace CodeBlockEndTag
 
         internal readonly UIElement Adornment;
 
-
         internal CBAdornmentData(int start, int end, int headerStart, UIElement adornment)
         {
             StartPosition = start;
@@ -18,6 +17,5 @@ namespace CodeBlockEndTag
             HeaderStartPosition = headerStart;
             Adornment = adornment;
         }
-
     }
 }

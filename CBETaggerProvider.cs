@@ -8,7 +8,6 @@ using System.ComponentModel.Composition;
 
 namespace CodeBlockEndTag
 {
-    
     /// <summary>
     /// This class serves as factory for VS to create the CBETagger
     /// </summary>
@@ -18,7 +17,6 @@ namespace CodeBlockEndTag
     [TagType(typeof(IntraTextAdornmentTag))]
     internal class CBETaggerProvider : IViewTaggerProvider
     {
-
         #region MEF-Imports: Services from VisualStudio
 #pragma warning disable CS0649
         // Disabled waring about default value. Value will be set by VS.
@@ -31,7 +29,7 @@ namespace CodeBlockEndTag
 
         [Import]
         internal ITextSearchService TextSearchService { get; set; }
-        
+
         [Import]
         internal IVsFontsAndColorsInformationService VsFontsAndColorsInformationService { get; set; }
 
@@ -45,14 +43,17 @@ namespace CodeBlockEndTag
         public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
         {
             // only works with IWpfTextView
-            var wpfTextView = textView as IWpfTextView;
-            if (wpfTextView == null)
+            if (textView is not IWpfTextView wpfTextView)
+            {
                 return null;
+            }
 
             // provide the tag only on the top-level buffer
             if (textView.TextBuffer != buffer)
+            {
                 return null;
-            
+            }
+
             // return new instance of CBETagger
             return new CBETagger(this, wpfTextView) as ITagger<T>;
         }

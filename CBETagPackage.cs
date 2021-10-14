@@ -5,13 +5,11 @@
 //------------------------------------------------------------------------------
 
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Utilities;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -37,7 +35,6 @@ namespace CodeBlockEndTag
     [PackageRegistration(UseManagedResourcesOnly = true, AllowsBackgroundLoading = true)]
     [InstalledProductRegistration("#110", "#112", "1.0", IconResourceID = 400)] // Info on this package for Help/About
     [Guid(CBETagPackage.PackageGuidString)]
-    [SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "pkgdef, VS and vsixmanifest are valid VS terms")]
     // Add OptionPage to package
     [ProvideOptionPage(typeof(CBEOptionPage), "KC Extensions", "CodeBlock End Tagger", 113, 114, true)]
     // Load package at every (including none) project type
@@ -61,8 +58,7 @@ namespace CodeBlockEndTag
         /// <summary>
         /// Gets the singelton instance of the class
         /// </summary>
-        public static CBETagPackage Instance => _instance;
-        private static CBETagPackage _instance;
+        public static CBETagPackage Instance { get; private set; }
 
         /// <summary>
         /// Reference on the package's option page
@@ -74,14 +70,13 @@ namespace CodeBlockEndTag
         /// </summary>
         public CBETagPackage()
         {
-            _instance = this;
+            Instance = this;
         }
 
         /// <summary>
         /// Gets a list of all possible content types in VisualStudio
         /// </summary>
         public static IList<IContentType> ContentTypes { get; private set; }
-
 
         /// <summary>
         /// Load the list of content types
@@ -119,9 +114,9 @@ namespace CodeBlockEndTag
         /// Initialization of the package; this method is called right after the package is sited, so this is the place
         /// where you can put all the initialization code that rely on services provided by VisualStudio.
         /// </summary>
-        protected override async System.Threading.Tasks.Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+        protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
         {
-            await base.InitializeAsync(cancellationToken, progress);
+            await base.InitializeAsync(cancellationToken, progress).ConfigureAwait(false);
 
             // Switches to the UI thread in order to consume some services used in command initialization
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
