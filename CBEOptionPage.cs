@@ -14,7 +14,7 @@ namespace CodeBlockEndTag
     public class CBEOptionPage : DialogPage
     {
         // Name of settings collection where bit array is stored
-        private const string collectionName = "CodeBlockEndTag";
+        private const string CollectionName = "CodeBlockEndTag";
 
         public delegate void OptionChangedHandler(object sender);
         public event OptionChangedHandler OptionChanged;
@@ -29,21 +29,20 @@ namespace CodeBlockEndTag
 
         // List of all supported languages
         // Never remove any! User preferences are stored for each array position
-        private readonly SupportedLang[] _supportedLangs = new SupportedLang[]
-        {
-            new SupportedLang() { Name = "CSharp",       DisplayName = "CSharp C#" },
+        private readonly SupportedLang[] _supportedLangs = {
+            new() { Name = Languages.CSharp,       DisplayName = "CSharp C#" },
             /*
              All of these languages don't come with a decent TextStructureNavigator so they can't be used right now
 
-            new SupportedLang() { Name = "C/C++",        DisplayName = "C/C++" },
-            new SupportedLang() { Name = "PowerShell",   DisplayName = "PowerShell" },
-            new SupportedLang() { Name = "JavaScript",   DisplayName = "JavaScript" },
-            new SupportedLang() { Name = "CoffeeScript", DisplayName = "CoffeeScript" },
-            new SupportedLang() { Name = "TypeScript",   DisplayName = "TypeScript" },
-            new SupportedLang() { Name = "SCSS",         DisplayName = "SCSS/CSS" },
-            new SupportedLang() { Name = "LESS",         DisplayName = "LESS" },
-            new SupportedLang() { Name = "SASS",         DisplayName = "SASS" },
-            new SupportedLang() { Name = "HTML",         DisplayName = "HTML(JS/CSS)" }
+            new() { Name = "C/C++",        DisplayName = "C/C++" },
+            new() { Name = "PowerShell",   DisplayName = "PowerShell" },
+            new() { Name = "JavaScript",   DisplayName = "JavaScript" },
+            new() { Name = "CoffeeScript", DisplayName = "CoffeeScript" },
+            new() { Name = "TypeScript",   DisplayName = "TypeScript" },
+            new() { Name = "SCSS",         DisplayName = "SCSS/CSS" },
+            new() { Name = "LESS",         DisplayName = "LESS" },
+            new() { Name = "SASS",         DisplayName = "SASS" },
+            new() { Name = "HTML",         DisplayName = "HTML(JS/CSS)" }
             */
         };
 
@@ -213,12 +212,12 @@ namespace CodeBlockEndTag
             var settingsManager = new ShellSettingsManager(ServiceProvider.GlobalProvider);
             var userSettingsStore = settingsManager.GetWritableSettingsStore(SettingsScope.UserSettings);
 
-            if (!userSettingsStore.CollectionExists(collectionName))
-                userSettingsStore.CreateCollection(collectionName);
+            if (!userSettingsStore.CollectionExists(CollectionName))
+                userSettingsStore.CreateCollection(CollectionName);
 
             var converter = new BoolArrayConverter();
             userSettingsStore.SetString(
-                collectionName,
+                CollectionName,
                 nameof(SupportedLangActive),
                 converter.ConvertTo(SupportedLangActive, typeof(string)) as string);
         }
@@ -232,12 +231,12 @@ namespace CodeBlockEndTag
             var settingsManager = new ShellSettingsManager(ServiceProvider.GlobalProvider);
             var userSettingsStore = settingsManager.GetWritableSettingsStore(SettingsScope.UserSettings);
 
-            if (!userSettingsStore.PropertyExists(collectionName, nameof(SupportedLangActive)))
+            if (!userSettingsStore.PropertyExists(CollectionName, nameof(SupportedLangActive)))
                 return;
 
             var converter = new BoolArrayConverter();
             SupportedLangActive = converter.ConvertFrom(
-                userSettingsStore.GetString(collectionName, nameof(SupportedLangActive))) as bool[];
+                userSettingsStore.GetString(CollectionName, nameof(SupportedLangActive))) as bool[];
         }
 
         #endregion
