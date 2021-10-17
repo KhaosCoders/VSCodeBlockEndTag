@@ -9,9 +9,14 @@ using System.Runtime.InteropServices;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Utilities;
+using Microsoft.VisualStudio.Shell.Interop;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
+using EnvDTE;
+using EnvDTE80;
 
 namespace CodeBlockEndTag
 {
@@ -42,12 +47,14 @@ namespace CodeBlockEndTag
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionHasMultipleProjects_string, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionHasSingleProject_string, PackageAutoLoadFlags.BackgroundLoad)]
-    public sealed class CBETagPackage : AsyncPackage
+    [ProvideService(typeof(IFontAndColorDefaultsProvider))]
+    [FontAndColorRegistration(typeof(IFontAndColorDefaultsProvider), Shell.FontAndColorDefaultsCSharpTags.CategoryNameString, Shell.FontAndColorDefaultsCSharpTags.CategoryGuidString)]
+    public sealed class CBETagPackage : AsyncPackage, IFontAndColorDefaultsProvider, IVsFontAndColorDefaultsProvider
     {
         /// <summary>
         /// CBETagPackage GUID string.
         /// </summary>
-        public const string PackageGuidString = "d7c91e0f-240b-4605-9f35-accf63a68623";
+        public const string PackageGuidString = "D7C91E0F-240B-4605-9F35-ACCF63A68623";
 
         public delegate void PackageOptionChangedHandler(object sender);
         /// <summary>
@@ -108,6 +115,27 @@ namespace CodeBlockEndTag
 
         #endregion
 
+        #region VS Build Version
+
+        public static async Task<double> GetVsVersionAsync()
+        {
+            DTE2 dte = (DTE2)await Instance.GetServiceAsync(typeof(DTE));
+
+            if (!double.TryParse(dte.Version, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture.NumberFormat, out double version))
+            {
+                throw new Exception("Can't read Visual Studio Version!");
+            }
+            return version;
+        }
+
+        public static async Task<string> GetVsRegistryRootAsync()
+        {
+            DTE2 dte = (DTE2)await Instance.GetServiceAsync(typeof(DTE));
+            return dte.RegistryRoot;
+        }
+
+        #endregion
+
         #region Package Members
 
         /// <summary>
@@ -121,6 +149,11 @@ namespace CodeBlockEndTag
             // Switches to the UI thread in order to consume some services used in command initialization
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
+            // ensure that we have instance
+            new Shell.FontAndColorDefaultsCSharpTags();
+
+            ((IServiceContainer)this).AddService(typeof(IFontAndColorDefaultsProvider), this, true);
+
             _optionPage = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
             _optionPage.OptionChanged += Page_OptionChanged;
 
@@ -130,6 +163,16 @@ namespace CodeBlockEndTag
 
         private void Page_OptionChanged(object sender) => PackageOptionChanged?.Invoke(this);
 
+        #endregion
+
+        #region IVsFontAndColorDefaultsProvider
+        int IVsFontAndColorDefaultsProvider.GetObject(ref Guid rguidCategory, out object ppObj)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            ppObj = rguidCategory == Shell.FontAndColorDefaultsCSharpTags.Instance.CategoryGuid ? Shell.FontAndColorDefaultsCSharpTags.Instance : null;
+            return 0;
+        }
         #endregion
     }
 }
