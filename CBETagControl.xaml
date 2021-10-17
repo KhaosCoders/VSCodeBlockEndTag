@@ -5,6 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
              xmlns:local="clr-namespace:CodeBlockEndTag"
+             xmlns:v="clr-namespace:CodeBlockEndTag.Shell"
              mc:Ignorable="d"
              d:DesignHeight="20" d:DesignWidth="100"
              Focusable="False" KeyboardNavigation.IsTabStop="False">
@@ -47,8 +48,7 @@
                             Canvas.Left="{Binding LineHeight, Converter={StaticResource addConv}, ConverterParameter=8}"
                             Text="{Binding Text}"
                             Background="Transparent"
-                            FontFamily="Calibri"
-                            Foreground="#FF999999"
+                            FontFamily="{DynamicResource {x:Static v:EndTagColors.FontFamilyKey}}"
                             FontSize="{Binding LineHeight}"
                             FontWeight="Normal"
                             FontStyle="Normal"

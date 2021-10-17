@@ -17,6 +17,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using EnvDTE;
 using EnvDTE80;
+using Microsoft.Win32;
 
 namespace CodeBlockEndTag
 {
@@ -159,9 +160,39 @@ namespace CodeBlockEndTag
 
             // Update taggers, that were initialized before the package
             PackageOptionChanged?.Invoke(this);
+
+            SubscribeForColorChangeEvents();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            UnsubscribeFromColorChangeEvents();
+
+            base.Dispose(disposing);
         }
 
         private void Page_OptionChanged(object sender) => PackageOptionChanged?.Invoke(this);
+
+        private static void FontAndColorsChanged(object sender, EventArgs args)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            Shell.FontAndColorDefaultsCSharpTags.Instance.ReloadFontAndColors();
+        }
+
+        private static void SubscribeForColorChangeEvents()
+        {
+            SystemEvents.DisplaySettingsChanged += FontAndColorsChanged;
+            SystemEvents.PaletteChanged += FontAndColorsChanged;
+            SystemEvents.UserPreferenceChanged += FontAndColorsChanged;
+        }
+
+        private static void UnsubscribeFromColorChangeEvents()
+        {
+            SystemEvents.DisplaySettingsChanged -= FontAndColorsChanged;
+            SystemEvents.PaletteChanged -= FontAndColorsChanged;
+            SystemEvents.UserPreferenceChanged -= FontAndColorsChanged;
+        }
 
         #endregion
 

@@ -30,9 +30,6 @@ namespace CodeBlockEndTag
         [Import]
         internal ITextSearchService TextSearchService { get; set; }
 
-        [Import]
-        internal IVsFontsAndColorsInformationService VsFontsAndColorsInformationService { get; set; }
-
 #pragma warning restore CS0649
         #endregion
 
