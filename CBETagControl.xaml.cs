@@ -4,7 +4,10 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
+using Brush = System.Drawing.Brush;
+using Size = System.Windows.Size;
 
 namespace CodeBlockEndTag
 {
@@ -19,7 +22,15 @@ namespace CodeBlockEndTag
             set => SetValue(TextProperty, value);
         }
         public static readonly DependencyProperty TextProperty =
-            DependencyProperty.Register("Text", typeof(string), typeof(CBETagControl), new PropertyMetadata("Unkown"));
+            DependencyProperty.Register("Text", typeof(string), typeof(CBETagControl), new PropertyMetadata("Unknown"));
+
+        public object TextColor
+        {
+            get => (object) GetValue(TextColorProperty);
+            set => SetValue(TextColorProperty, value);
+        }
+        public static readonly DependencyProperty TextColorProperty = DependencyProperty.Register(
+            "TextColor", typeof(object), typeof(CBETagControl), new PropertyMetadata(Colors.Black));
 
         public ImageMoniker IconMoniker
         {

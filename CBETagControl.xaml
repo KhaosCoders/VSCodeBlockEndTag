@@ -11,6 +11,7 @@
              Focusable="False" KeyboardNavigation.IsTabStop="False">
     <UserControl.Resources>
         <local:AdditionValueConverter x:Key="addConv" />
+        <local:TextColorConverter x:Key="convColor" />
     </UserControl.Resources>
 
     <Button
@@ -50,6 +51,7 @@
                             Background="Transparent"
                             FontFamily="{DynamicResource {x:Static v:EndTagColors.FontFamilyKey}}"
                             FontSize="{Binding LineHeight}"
+                            Foreground="{Binding TextColor, Converter={StaticResource convColor}}"
                             FontWeight="Normal"
                             FontStyle="Normal"
                             Focusable="False" KeyboardNavigation.IsTabStop="False">

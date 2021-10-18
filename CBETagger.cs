@@ -9,13 +9,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 
 namespace CodeBlockEndTag
 {
-    /// <summary>
+    /// <summary>f
     /// This tagger provides editor tags that are inserted into the TextView (IntraTextAdornmentTags)
     /// The tags are added after each code block encapsulated by curly bracets: { ... }
     /// The tags will show the code blocks condition, or whatever serves as header for the block
@@ -359,7 +357,7 @@ namespace CodeBlockEndTag
                     }
 
                     tagElement.SetResourceReference(CBETagControl.LineHeightProperty, EndTagColors.FontSizeKey);
-                    tagElement.SetResourceReference(TextBlock.ForegroundProperty, EndTagColors.GetForegroundResourceKey(_TextView.TextBuffer.ContentType.TypeName));
+                    tagElement.SetResourceReference(CBETagControl.TextColorProperty, EndTagColors.GetForegroundResourceKey(_TextView.TextBuffer.ContentType.TypeName));
 
                     // Add new tag to list
                     cbTag = new IntraTextAdornmentTag(tagElement, null);
