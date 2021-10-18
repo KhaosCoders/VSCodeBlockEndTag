@@ -150,22 +150,13 @@
     <PackageReference Include="Microsoft.VisualStudio.CommandBars">
       <Version>17.0.0-previews-4-31709-430</Version>
     </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.ComponentModelHost">
-      <Version>17.0.391-preview-g5e248c9073</Version>
-    </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Editor">
       <Version>17.0.391-preview-g5e248c9073</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.ImageCatalog">
       <Version>17.0.0-previews-4-31709-430</Version>
     </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.Imaging">
-      <Version>17.0.0-previews-4-31709-430</Version>
-    </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Imaging.Interop.14.0.DesignTime">
-      <Version>17.0.0-previews-5-31722-452</Version>
-    </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.Interop">
       <Version>17.0.0-previews-5-31722-452</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.ProjectAggregator">
