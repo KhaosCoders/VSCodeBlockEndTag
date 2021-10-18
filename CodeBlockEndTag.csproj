@@ -159,9 +159,6 @@
     <PackageReference Include="Microsoft.VisualStudio.Imaging.Interop.14.0.DesignTime">
       <Version>17.0.0-previews-5-31722-452</Version>
     </PackageReference>
-    <PackageReference Include="Microsoft.VisualStudio.ProjectAggregator">
-      <Version>17.0.0-previews-4-31709-430</Version>
-    </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.SDK">
       <Version>17.0.0-previews-4-31709-430</Version>
     </PackageReference>
