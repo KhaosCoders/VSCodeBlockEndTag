@@ -139,47 +139,43 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EnvDTE">
-      <Version>17.0.0-previews-4-31709-430</Version>
+      <Version>8.0.2</Version>
     </PackageReference>
     <PackageReference Include="EnvDTE100">
-      <Version>17.0.0-previews-4-31709-430</Version>
+      <Version>10.0.3</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.Build.Framework">
       <Version>16.11.0</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.CommandBars">
-      <Version>17.0.0-previews-4-31709-430</Version>
+      <Version>8.0.0.1</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Editor">
-      <Version>17.0.391-preview-g5e248c9073</Version>
+      <Version>15.8.525</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.ImageCatalog">
-      <Version>17.0.0-previews-4-31709-430</Version>
+      <Version>15.9.28307</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Imaging.Interop.14.0.DesignTime">
-      <Version>17.0.0-previews-5-31722-452</Version>
+      <Version>14.3.26931</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.SDK">
-      <Version>17.0.0-previews-4-31709-430</Version>
+      <Version>15.0.1</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.SDK.Analyzers">
-      <Version>16.10.10</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
+      <Version>15.8.36</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Shell.Interop.12.0">
-      <Version>17.0.0-previews-4-31709-430</Version>
+      <Version>12.0.30110</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Threading">
-      <Version>17.0.63</Version>
+      <Version>15.8.209</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers">
-      <Version>17.0.63</Version>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
+      <Version>15.8.209</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.VSSDK.BuildTools">
-      <Version>17.0.5232</Version>
+      <Version>16.11.16</Version>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
