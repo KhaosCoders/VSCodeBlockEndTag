@@ -297,7 +297,7 @@ namespace Microsoft.VisualStudio.Shell.Interop
             return 0;
         }
 
-        public int OnFontChanged(ref Guid rguidCategory, FontInfo[] pInfo, LOGFONTW[] pLOGFONT, IntPtr HFONT)
+        public int OnFontChanged(ref Guid rguidCategory, FontInfo[] pInfo, LOGFONTW[] pLOGFONT, uint HFONT)
         {
             return 0;
         }
