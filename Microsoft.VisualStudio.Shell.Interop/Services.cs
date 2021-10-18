@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Reflection;
 using System.Windows.Media;
 using Microsoft.Internal.VisualStudio.Shell.Interop;
 
@@ -12,6 +13,8 @@ namespace Microsoft.VisualStudio.Shell.Interop
         private static IVsFontAndColorUtilities _fontAndColorUtilities;
         private static dynamic _colorThemeService;
 
+        private static Type _colorNameType;
+
         public static bool TryGetThemeColor(Guid colorCategory, string colorName, __THEMEDCOLORTYPE colorType, out uint result)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -22,9 +25,12 @@ namespace Microsoft.VisualStudio.Shell.Interop
             }
 
             var currentTheme = ColorThemeService?.CurrentTheme;
-            dynamic colorNameInst = Activator.CreateInstance("Microsoft.Internal.VisualStudio.Interop", "Microsoft.Internal.VisualStudio.Shell.Interop.ColorName").Unwrap();
+            _colorNameType ??= (currentTheme.GetType() as Type).GetMethod("get_Item").GetParameters()[0].ParameterType;
+
+            dynamic colorNameInst = Activator.CreateInstance(_colorNameType);
             colorNameInst.Category = colorCategory;
             colorNameInst.Name = colorName;
+
             var entry = currentTheme?[colorNameInst];
 
             if (entry != null)
