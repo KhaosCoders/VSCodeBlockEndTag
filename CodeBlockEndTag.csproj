@@ -75,10 +75,12 @@
     <Compile Include="CBETagger.cs" />
     <Compile Include="CBETaggerProvider.cs" />
     <Compile Include="CBETagPackage.cs" />
+    <Compile Include="TextColorConverter.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="IconMonikerSelector.cs" />
     <Compile Include="IFontAndColorDefaultsProvider.cs" />
     <Compile Include="Languages.cs" />
+    <Compile Include="Microsoft.Internal.VisualStudio.Shell.Interop\FontAndColorsOptionPageDummy.cs" />
     <Compile Include="Microsoft.Internal.VisualStudio.Shell.Interop\Interfaces.cs" />
     <Compile Include="Microsoft.VisualStudio.Shell.Interop\FontAndColorDefaultsBase.cs" />
     <Compile Include="Microsoft.VisualStudio.Shell.Interop\FontAndColorRegistrationAttribute.cs" />

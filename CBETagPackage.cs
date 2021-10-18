@@ -110,9 +110,7 @@ namespace CodeBlockEndTag
 
         public static bool CBETaggerEnabled => _optionPage?.CBETaggerEnabled ?? false;
 
-        public static int CBEClickMode => _optionPage?.CBEClickMode ?? (int)CBEOptionPage.ClickMode.DoubleClick;
-
-        public static double CBETagScale => _optionPage?.CBETagScale ?? 1d;
+        public static int CBEClickMode => _optionPage?.CBEClickMode ?? (int) CBEOptionPage.ClickMode.DoubleClick;
 
         #endregion
 

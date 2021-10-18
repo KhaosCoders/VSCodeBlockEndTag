@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Windows.Forms;
+using Microsoft.Internal.VisualStudio.Shell.Interop;
 
 namespace CodeBlockEndTag
 {
@@ -29,9 +30,6 @@ namespace CodeBlockEndTag
             rdbIconAndText.Checked = optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.IconAndText;
             rdbIconOnly.Checked = optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.Icon;
             rdbTextOnly.Checked = optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.Text;
-
-            tbrTagSize.Value = (int)(optionsPage.CBETagScale * 10);
-            UpdateSizeLabel();
 
             lviLanguages.Items.Clear();
             string[] langs = optionsPage.SupportedLangDisplayNames;
@@ -129,18 +127,9 @@ namespace CodeBlockEndTag
             optionsPage.SetSupportedLangActive(e.Index, e.NewValue == CheckState.Checked);
         }
 
-        private void TbrTagSize_ValueChanged(object sender, EventArgs e)
+        private void lblFont_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            if (sender is TrackBar bar)
-            {
-                optionsPage.CBETagScale = bar.Value / 10.0d;
-                UpdateSizeLabel();
-            }
-        }
-
-        private void UpdateSizeLabel()
-        {
-            lblTagSize.Text = string.Format("{0} %", optionsPage.CBETagScale * 100);
+            CBETagPackage.Instance.ShowOptionPage(typeof(FontAndColorsOptionPageDummy));
         }
     }
 }
