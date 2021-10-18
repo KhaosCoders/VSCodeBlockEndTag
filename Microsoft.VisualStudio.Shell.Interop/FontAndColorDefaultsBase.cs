@@ -302,6 +302,12 @@ namespace Microsoft.VisualStudio.Shell.Interop
             return 0;
         }
 
+        // VS 2022 has a slightly different API here. Virtual is needed to allow VS 2022 to still load the package
+        public virtual int OnFontChanged(ref Guid rguidCategory, FontInfo[] pInfo, LOGFONTW[] pLOGFONT, IntPtr HFONT)
+        {
+            return 0;
+        }
+
         int IVsFontAndColorEvents.OnItemChanged(ref Guid category, string name, int item, ColorableItemInfo[] info, uint forground, uint background)
         {
             return 0;
