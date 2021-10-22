@@ -26,7 +26,7 @@ namespace CodeBlockEndTag
 
         public object TextColor
         {
-            get => (object) GetValue(TextColorProperty);
+            get => (object)GetValue(TextColorProperty);
             set => SetValue(TextColorProperty, value);
         }
         public static readonly DependencyProperty TextColorProperty = DependencyProperty.Register(
@@ -75,11 +75,9 @@ namespace CodeBlockEndTag
                 // No label
                 return new Size(LineHeight + 4 + paddingRight, LineHeight);
             }
-            else
-            {
-                TextBlock tb = btnTag.Template.FindName("txtTag", btnTag) as TextBlock;
-                return new Size(8 + LineHeight + (tb?.ActualWidth ?? 0) + paddingRight, LineHeight);
-            }
+
+            TextBlock tb = btnTag.Template.FindName("txtTag", btnTag) as TextBlock;
+            return new Size(8 + LineHeight + (tb?.ActualWidth ?? 0) + paddingRight, LineHeight);
         }
 
         private DispatcherTimer buttonSingleClickTimeout;
@@ -134,6 +132,13 @@ namespace CodeBlockEndTag
             return CBETagPackage.CBEClickMode != (int)CBEOptionPage.ClickMode.CtrlClick
                 || Keyboard.IsKeyDown(Key.LeftCtrl)
                 || Keyboard.IsKeyDown(Key.RightCtrl);
+        }
+
+        private void TxtTag_OnInitialized(object sender, EventArgs e)
+        {
+            this.InvalidateMeasure();
+
+            TextBlock tb = btnTag.Template.FindName("txtTag", btnTag) as TextBlock;
         }
     }
 }
