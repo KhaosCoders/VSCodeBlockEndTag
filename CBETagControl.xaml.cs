@@ -6,7 +6,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using Brush = System.Drawing.Brush;
 using Size = System.Windows.Size;
 
 namespace CodeBlockEndTag
