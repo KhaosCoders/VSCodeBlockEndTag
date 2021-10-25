@@ -50,7 +50,7 @@ namespace CodeBlockEndTag
     [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionHasSingleProject_string, PackageAutoLoadFlags.BackgroundLoad)]
     [ProvideService(typeof(IFontAndColorDefaultsProvider))]
     [FontAndColorRegistration(typeof(IFontAndColorDefaultsProvider), Shell.FontAndColorDefaultsCSharpTags.CategoryNameString, Shell.FontAndColorDefaultsCSharpTags.CategoryGuidString)]
-    public sealed class CBETagPackage : AsyncPackage, IFontAndColorDefaultsProvider, IVsFontAndColorDefaultsProvider
+    public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvider, IFontAndColorDefaultsProvider
     {
         /// <summary>
         /// CBETagPackage GUID string.
@@ -72,6 +72,11 @@ namespace CodeBlockEndTag
         /// Reference on the package's option page
         /// </summary>
         private static CBEOptionPage _optionPage;
+
+        /// <summary>
+        /// Instance of ActivityLog
+        /// </summary>
+        public IVsActivityLog Log { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CBETagPackage"/> class.
@@ -110,7 +115,7 @@ namespace CodeBlockEndTag
 
         public static bool CBETaggerEnabled => _optionPage?.CBETaggerEnabled ?? false;
 
-        public static int CBEClickMode => _optionPage?.CBEClickMode ?? (int) CBEOptionPage.ClickMode.DoubleClick;
+        public static int CBEClickMode => _optionPage?.CBEClickMode ?? (int)CBEOptionPage.ClickMode.DoubleClick;
 
         #endregion
 
@@ -148,9 +153,18 @@ namespace CodeBlockEndTag
             // Switches to the UI thread in order to consume some services used in command initialization
             await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
+            Log = await GetServiceAsync(typeof(SVsActivityLog)) as IVsActivityLog;
+            if (Log == null)
+            {
+                return;
+            }
+
+            Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), "InitializeAsync");
+
             // ensure that we have instance
             new Shell.FontAndColorDefaultsCSharpTags();
 
+            Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), "Register IFontAndColorDefaultsProvider");
             ((IServiceContainer)this).AddService(typeof(IFontAndColorDefaultsProvider), this, true);
 
             _optionPage = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
@@ -160,6 +174,8 @@ namespace CodeBlockEndTag
             PackageOptionChanged?.Invoke(this);
 
             SubscribeForColorChangeEvents();
+
+            Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), "InitializeAsync ended");
         }
 
         protected override void Dispose(bool disposing)
@@ -195,11 +211,14 @@ namespace CodeBlockEndTag
         #endregion
 
         #region IVsFontAndColorDefaultsProvider
-        int IVsFontAndColorDefaultsProvider.GetObject(ref Guid rguidCategory, out object ppObj)
+        public int GetObject(ref Guid rguidCategory, out object ppObj)
         {
+            Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"GetObject {rguidCategory}");
             ThreadHelper.ThrowIfNotOnUIThread();
 
             ppObj = rguidCategory == Shell.FontAndColorDefaultsCSharpTags.Instance.CategoryGuid ? Shell.FontAndColorDefaultsCSharpTags.Instance : null;
+
+            Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"GetObject {rguidCategory} obj: {ppObj}");
             return 0;
         }
         #endregion
