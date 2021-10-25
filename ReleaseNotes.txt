@@ -1,4 +1,8 @@
-﻿Version 3.2:
+﻿Version 3.2.1.1:
+	Fixed measure of tags sometimes is too small
+	Fixed text color sometimes is black
+
+Version 3.2:
 	Fixed crash in VS 2019
 	Added support for Font And Colors options and themeing
 
