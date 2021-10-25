@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Media;
+using CodeBlockEndTag;
 using Microsoft.VisualStudio.TextManager.Interop;
 
 namespace Microsoft.VisualStudio.Shell.Interop
@@ -54,89 +55,107 @@ namespace Microsoft.VisualStudio.Shell.Interop
             public AllColorableItemInfo CreateColorInfo()
             {
                 ThreadHelper.ThrowIfNotOnUIThread();
-
-                if (!TryGetDefaultBackground(out var defaultBackgroundColor))
+                try
                 {
-                    defaultBackgroundColor = 0;
-                }
-                if (!TryGetDefaultForeground(out var defaultForegroundColor))
-                {
-                    defaultForegroundColor = 0;
-                }
-
-                var flags = __FCITEMFLAGS.FCIF_ALLOWCUSTOMCOLORS;
-                if ((Usage & ColorUsage.Background) == ColorUsage.Background)
-                {
-                    flags |= __FCITEMFLAGS.FCIF_ALLOWBGCHANGE;
-                }
-                if ((Usage & ColorUsage.Foreground) == ColorUsage.Foreground)
-                {
-                    flags |= __FCITEMFLAGS.FCIF_ALLOWFGCHANGE;
-                }
-
-                return new AllColorableItemInfo
-                {
-                    Info = new ColorableItemInfo
+                    if (!TryGetDefaultBackground(out var defaultBackgroundColor))
                     {
-                        crBackground = 0x2000000,
-                        bBackgroundValid = 1,
-                        crForeground = 0x2000000,
-                        bForegroundValid = 1,
-                        dwFontFlags = 0,
-                        bFontFlagsValid = 1
-                    },
-                    bstrName = Name,
-                    bNameValid = (Name != null) ? 1 : 0,
-                    bstrLocalizedName = LocalizedName,
-                    bLocalizedNameValid = (LocalizedName != null) ? 1 : 0,
-                    crAutoBackground = defaultBackgroundColor,
-                    bAutoBackgroundValid = 1,
-                    crAutoForeground = defaultForegroundColor,
-                    bAutoForegroundValid = 1,
-                    dwMarkerVisualStyle = 0,
-                    bMarkerVisualStyleValid = 1,
-                    eLineStyle = LINESTYLE.LI_NONE,
-                    bLineStyleValid = 1,
-                    fFlags = (uint)flags,
-                    bFlagsValid = 1,
-                    bstrDescription = Description,
-                    bDescriptionValid = (Description != null) ? 1 : 0,
-                };
+                        defaultBackgroundColor = 0;
+                    }
+                    if (!TryGetDefaultForeground(out var defaultForegroundColor))
+                    {
+                        defaultForegroundColor = 0;
+                    }
+
+                    var flags = __FCITEMFLAGS.FCIF_ALLOWCUSTOMCOLORS;
+                    if ((Usage & ColorUsage.Background) == ColorUsage.Background)
+                    {
+                        flags |= __FCITEMFLAGS.FCIF_ALLOWBGCHANGE;
+                    }
+                    if ((Usage & ColorUsage.Foreground) == ColorUsage.Foreground)
+                    {
+                        flags |= __FCITEMFLAGS.FCIF_ALLOWFGCHANGE;
+                    }
+
+                    return new AllColorableItemInfo
+                    {
+                        Info = new ColorableItemInfo
+                        {
+                            crBackground = 0x2000000,
+                            bBackgroundValid = 1,
+                            crForeground = 0x2000000,
+                            bForegroundValid = 1,
+                            dwFontFlags = 0,
+                            bFontFlagsValid = 1
+                        },
+                        bstrName = Name,
+                        bNameValid = (Name != null) ? 1 : 0,
+                        bstrLocalizedName = LocalizedName,
+                        bLocalizedNameValid = (LocalizedName != null) ? 1 : 0,
+                        crAutoBackground = defaultBackgroundColor,
+                        bAutoBackgroundValid = 1,
+                        crAutoForeground = defaultForegroundColor,
+                        bAutoForegroundValid = 1,
+                        dwMarkerVisualStyle = 0,
+                        bMarkerVisualStyleValid = 1,
+                        eLineStyle = LINESTYLE.LI_NONE,
+                        bLineStyleValid = 1,
+                        fFlags = (uint)flags,
+                        bFlagsValid = 1,
+                        bstrDescription = Description,
+                        bDescriptionValid = (Description != null) ? 1 : 0,
+                    };
+                }
+                catch (Exception e)
+                {
+                    CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(), $"CreateColorInfo Error: {e}");
+                    throw;
+                }
             }
 
             public void UpdateResources(ResourceDictionary resources, Color? backgroundColor, Color? foregroundColor)
             {
+                try
+                {
 #pragma warning disable VSTHRD010 // Invoke single-threaded types on Main thread
-                if ((Usage & ColorUsage.Background) == ColorUsage.Background)
-                {
-                    var key = new ThemeResourceKey(_parent.CategoryGuid, Name, ThemeResourceKeyType.BackgroundBrush);
-                    if (backgroundColor.HasValue)
+                    if ((Usage & ColorUsage.Background) == ColorUsage.Background)
                     {
-                        var brush = new SolidColorBrush(backgroundColor.Value);
-                        brush.Freeze();
-                        resources[key] = brush;
+                        var key = new ThemeResourceKey(_parent.CategoryGuid, Name, ThemeResourceKeyType.BackgroundBrush);
+                        if (backgroundColor.HasValue)
+                        {
+                            var brush = new SolidColorBrush(backgroundColor.Value);
+                            brush.Freeze();
+                            resources[key] = brush;
+                        }
+                        else
+                        {
+                            resources.Remove(key);
+                        }
                     }
-                    else
-                    {
-                        resources.Remove(key);
-                    }
-                }
 
-                if ((Usage & ColorUsage.Foreground) == ColorUsage.Foreground)
-                {
-                    var key = new ThemeResourceKey(_parent.CategoryGuid, Name, ThemeResourceKeyType.ForegroundBrush);
-                    if (foregroundColor.HasValue)
+                    if ((Usage & ColorUsage.Foreground) == ColorUsage.Foreground)
                     {
-                        var brush = new SolidColorBrush(foregroundColor.Value);
-                        brush.Freeze();
-                        resources[key] = brush;
+                        var key = new ThemeResourceKey(_parent.CategoryGuid, Name, ThemeResourceKeyType.ForegroundBrush);
+                        if (foregroundColor.HasValue)
+                        {
+                            var brush = new SolidColorBrush(foregroundColor.Value);
+
+                            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(),
+                                $"UpdateResources Name: {Name} Color: {foregroundColor.Value}");
+                            brush.Freeze();
+                            resources[key] = brush;
+                        }
+                        else
+                        {
+                            resources.Remove(key);
+                        }
                     }
-                    else
-                    {
-                        resources.Remove(key);
-                    }
-                }
 #pragma warning restore VSTHRD010 // Invoke single-threaded types on Main thread
+                }
+                catch (Exception e)
+                {
+                    CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(), $"UpdateResources Error: {e}");
+                    throw;
+                }
             }
         }
         #endregion
@@ -163,11 +182,14 @@ namespace Microsoft.VisualStudio.Shell.Interop
 
         public void ReloadFontAndColors()
         {
+            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(),
+                $"ReloadFontAndColors");
             ThreadHelper.ThrowIfNotOnUIThread();
 
             _fontInfoInitialized = true;
 
             #region fill out temorary resources
+
             var colorStorage = FontAndColorStorage;
             var categoryGuid = CategoryGuid;
             var fflags =
@@ -175,13 +197,19 @@ namespace Microsoft.VisualStudio.Shell.Interop
                 (uint)__FCSTORAGEFLAGS.FCSF_NOAUTOCOLORS |
                 (uint)__FCSTORAGEFLAGS.FCSF_READONLY;
 
-            if (!ErrorHandler.Succeeded(colorStorage.OpenCategory(ref categoryGuid, fflags))) return;
+            if (!ErrorHandler.Succeeded(colorStorage.OpenCategory(ref categoryGuid, fflags)))
+            {
+                CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(),
+                    $"Unable to open category {categoryGuid} in color storage");
+                return;
+            }
 
             try
             {
                 var pLOGFONT = new LOGFONTW[1];
                 var pFontInfo = new FontInfo[1];
-                if (ErrorHandler.Succeeded(colorStorage.GetFont(pLOGFONT, pFontInfo)) && (pFontInfo[0].bFaceNameValid == 1))
+                if (ErrorHandler.Succeeded(colorStorage.GetFont(pLOGFONT, pFontInfo)) &&
+                    (pFontInfo[0].bFaceNameValid == 1))
                 {
                     var fontInfoRef = pFontInfo[0];
                     var fontFamily = new FontFamily(fontInfoRef.bstrFaceName);
@@ -202,20 +230,41 @@ namespace Microsoft.VisualStudio.Shell.Interop
                     Color? foregroundColor = null;
 
                     var pColorInfo = new ColorableItemInfo[1];
-                    if (ErrorHandler.Succeeded(colorStorage.GetItem(colorEntry.Name, pColorInfo)))
+                    if (!ErrorHandler.Succeeded(colorStorage.GetItem(colorEntry.Name, pColorInfo)))
+                    {
+                        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(),
+                            $"Can't find color {colorEntry.Name} in color storage");
+                        if (colorEntry.DefaultForeground.Any() && colorEntry.DefaultForeground.First().TryGetValue(out var foreground))
+                        {
+                            foregroundColor = Services.CreateWpfColor(foreground);
+                        }
+                        if (colorEntry.DefaultBackground.Any() && colorEntry.DefaultBackground.First().TryGetValue(out var background))
+                        {
+                            backgroundColor = Services.CreateWpfColor(background);
+                        }
+                    }
+                    else
                     {
                         if (pColorInfo[0].bBackgroundValid == 1)
                         {
                             backgroundColor = Services.CreateWpfColor(pColorInfo[0].crBackground);
                         }
+
                         if (pColorInfo[0].bForegroundValid == 1)
                         {
                             foregroundColor = Services.CreateWpfColor(pColorInfo[0].crForeground);
+                            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(),
+                                $"ReloadFontAndColors {pColorInfo[0].crForeground} => {foregroundColor}");
                         }
                     }
 
                     colorEntry.UpdateResources(_resourceDictionary, backgroundColor, foregroundColor);
                 }
+            }
+            catch (Exception e)
+            {
+                CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(), $"ReloadFontAndColors Error: {e}");
+                throw;
             }
             finally
             {
@@ -257,10 +306,24 @@ namespace Microsoft.VisualStudio.Shell.Interop
 
         int IVsFontAndColorDefaults.GetItem(int index, AllColorableItemInfo[] info)
         {
-            if (0 > index || index >= ColorEntries.Count) return -2147467259;
+            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"GetItem: {index}");
+            try
+            {
+                if (0 > index || index >= ColorEntries.Count)
+                {
+                    CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(), $"GetItem: failed");
+                    return -2147467259;
+                }
 
-            info[0] = ColorEntries[index].CreateColorInfo();
-            return 0;
+                info[0] = ColorEntries[index].CreateColorInfo();
+                CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"GetItem: Ok");
+                return 0;
+            }
+            catch (Exception e)
+            {
+                CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(), $"GetItem Error: {e}");
+                throw;
+            }
         }
 
         int IVsFontAndColorDefaults.GetItemByName(string name, AllColorableItemInfo[] info)
@@ -277,6 +340,7 @@ namespace Microsoft.VisualStudio.Shell.Interop
 
         int IVsFontAndColorDefaults.GetItemCount(out int items)
         {
+            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"GetItemCount: {ColorEntries.Count}");
             items = ColorEntries.Count;
             return 0;
         }
@@ -293,6 +357,7 @@ namespace Microsoft.VisualStudio.Shell.Interop
 #pragma warning disable VSTHRD010 // Invoke single-threaded types on Main thread
         int IVsFontAndColorEvents.OnApply()
         {
+            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"OnApply");
             ReloadFontAndColors();
             return 0;
         }
