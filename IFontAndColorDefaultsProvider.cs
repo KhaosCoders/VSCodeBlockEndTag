@@ -2,7 +2,7 @@
 
 namespace CodeBlockEndTag
 {
-    [Guid("00FD298A-D658-4F98-9A8D-FD969B272E76")]
+    [Guid("5B100711-3B75-4F3A-B548-6E18C23E12FC")]
     internal interface IFontAndColorDefaultsProvider
     {
     }
