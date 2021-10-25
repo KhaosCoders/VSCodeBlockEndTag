@@ -547,11 +547,11 @@ namespace CodeBlockEndTag
         /// </summary>
         private void InitializePackage()
         {
-            if (!isPackageInitialized && CBETagPackage.Instance != null && !_Disposed)
-            {
-                CBETagPackage.Instance.PackageOptionChanged += OnPackageOptionChanged;
-                isPackageInitialized = true;
-            }
+            if (isPackageInitialized || CBETagPackage.Instance == null || _Disposed) return;
+
+            CBETagPackage.Instance.PackageOptionChanged += OnPackageOptionChanged;
+            FontAndColorDefaultsCSharpTags.Instance.EnsureFontAndColorsInitialized();
+            isPackageInitialized = true;
         }
 
         private bool isPackageInitialized;
