@@ -1,4 +1,5 @@
 ﻿using System;
+using CodeBlockEndTag.Model;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 
@@ -8,7 +9,7 @@ internal static class EndTagColors
 {
     static EndTagColors()
     {
-        var category = new Guid(FontAndColorDefaultsCSharpTags.CategoryGuidString);
+        var category = Guid.Parse(FontAndColorDefaultsCSharpTags.CategoryGuidString);
 
         FontFamilyKey = new FontResourceKey(category, FontResourceKeyType.FontFamily);
         FontSizeKey = new FontResourceKey(category, FontResourceKeyType.FontSize);
@@ -25,6 +26,8 @@ internal static class EndTagColors
     }
 
     public static FontResourceKey FontFamilyKey { get; }
+
     public static FontResourceKey FontSizeKey { get; }
+
     public static ThemeResourceKey CSharpEndTagForegroundBrushKey { get; }
 }

@@ -2,16 +2,16 @@
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
-    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <OldToolsVersion>14.0</OldToolsVersion>
     <LangVersion>latest</LangVersion>
+    <UseCodebase>true</UseCodebase>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
-    <UseCodebase>true</UseCodebase>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <UpgradeBackupLocation>
     </UpgradeBackupLocation>
-    <OldToolsVersion>14.0</OldToolsVersion>
     <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup>
@@ -57,16 +57,17 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="AdditionValueConverter.cs" />
-    <Compile Include="BoolArrayConverter.cs" />
-    <Compile Include="CBAdornmentData.cs" />
-    <Compile Include="CBEOptionPage.cs">
+    <Compile Include="Model\ClickMode.cs" />
+    <Compile Include="Converters\AdditionValueConverter.cs" />
+    <Compile Include="Converters\BoolArrayConverter.cs" />
+    <Compile Include="Model\CBAdornmentData.cs" />
+    <Compile Include="OptionPage\CBEOptionPage.cs">
       <SubType>Component</SubType>
     </Compile>
-    <Compile Include="CBEOptionPageControl.cs">
+    <Compile Include="OptionPage\CBEOptionPageControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="CBEOptionPageControl.Designer.cs">
+    <Compile Include="OptionPage\CBEOptionPageControl.Designer.cs">
       <DependentUpon>CBEOptionPageControl.cs</DependentUpon>
     </Compile>
     <Compile Include="CBETagControl.xaml.cs">
@@ -75,13 +76,14 @@
     <Compile Include="CBETagger.cs" />
     <Compile Include="CBETaggerProvider.cs" />
     <Compile Include="CBETagPackage.cs" />
-    <Compile Include="TextColorConverter.cs" />
-    <Compile Include="Extensions.cs" />
+    <Compile Include="Converters\TextColorConverter.cs" />
+    <Compile Include="Model\DisplayModes.cs" />
+    <Compile Include="Extensions\SpanExtensions.cs" />
     <Compile Include="IconMonikerSelector.cs" />
-    <Compile Include="IFontAndColorDefaultsProvider.cs" />
-    <Compile Include="Languages.cs" />
+    <Compile Include="Microsoft.Internal.VisualStudio.Shell.Interop\IFontAndColorDefaultsProvider.cs" />
+    <Compile Include="System.ComponentModel\IsExternalInit.cs" />
+    <Compile Include="Model\Languages.cs" />
     <Compile Include="Microsoft.Internal.VisualStudio.Shell.Interop\FontAndColorsOptionPageDummy.cs" />
-    <Compile Include="Microsoft.Internal.VisualStudio.Shell.Interop\Interfaces.cs" />
     <Compile Include="Microsoft.VisualStudio.Shell.Interop\FontAndColorDefaultsBase.cs" />
     <Compile Include="Microsoft.VisualStudio.Shell.Interop\FontAndColorRegistrationAttribute.cs" />
     <Compile Include="Microsoft.VisualStudio.Shell.Interop\FontResourceKey.cs" />
@@ -92,6 +94,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Shell\EndTagColors.cs" />
     <Compile Include="Shell\FontAndColorDefaultsCSharpTags.cs" />
+    <Compile Include="Model\SupportedLang.cs" />
+    <Compile Include="Model\VisibilityModes.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
@@ -130,7 +134,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="CBEOptionPageControl.resx">
+    <EmbeddedResource Include="OptionPage\CBEOptionPageControl.resx">
       <DependentUpon>CBEOptionPageControl.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="VSPackage.resx">

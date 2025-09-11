@@ -1,4 +1,5 @@
-﻿using Microsoft.VisualStudio.Imaging;
+﻿using CodeBlockEndTag.Model;
+using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Imaging.Interop;
 using System;
 using System.Windows;
@@ -55,7 +56,7 @@ public partial class CBETagControl : UserControl
     public static readonly DependencyProperty LineHeightProperty =
         DependencyProperty.Register("LineHeight", typeof(double), typeof(CBETagControl), new PropertyMetadata(9d));
 
-    internal CBAdornmentData AdornmentData { get; set; }
+    internal CBAdornmentData? AdornmentData { get; set; }
 
     internal delegate void TagClickHandler(CBAdornmentData adornment, bool jumpToHead);
     internal event TagClickHandler TagClicked;
@@ -115,20 +116,20 @@ public partial class CBETagControl : UserControl
     {
         int neededClickCount = CBETagPackage.CBEClickMode switch
         {
-            (int)CBEOptionPage.ClickMode.SingleClick or (int)CBEOptionPage.ClickMode.CtrlClick => 1,
-            (int)CBEOptionPage.ClickMode.DoubleClick => 2,
+            (int)Model.ClickMode.SingleClick or (int)Model.ClickMode.CtrlClick => 1,
+            (int)Model.ClickMode.DoubleClick => 2,
             _ => 0,
         };
-        if (AdornmentData != null)
+        if (AdornmentData.HasValue)
         {
             bool jumpToHead = (clickCount >= neededClickCount) && buttonModifiersPressed;
-            TagClicked?.Invoke(AdornmentData, jumpToHead);
+            TagClicked?.Invoke(AdornmentData.Value, jumpToHead);
         }
     }
 
     private bool CheckModifiers()
     {
-        return CBETagPackage.CBEClickMode != (int)CBEOptionPage.ClickMode.CtrlClick
+        return CBETagPackage.CBEClickMode != (int)Model.ClickMode.CtrlClick
             || Keyboard.IsKeyDown(Key.LeftCtrl)
             || Keyboard.IsKeyDown(Key.RightCtrl);
     }

@@ -188,7 +188,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
 
         _fontInfoInitialized = true;
 
-        #region fill out temorary resources
+        #region fill out temporary resources
 
         var colorStorage = FontAndColorStorage;
         var categoryGuid = CategoryGuid;
@@ -330,7 +330,10 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
     {
         foreach (var entry in ColorEntries)
         {
-            if (entry.Name != name) continue;
+            if (entry.Name != name)
+            {
+                continue;
+            }
 
             info[0] = entry.CreateColorInfo();
             return 0;

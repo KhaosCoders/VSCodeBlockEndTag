@@ -7,11 +7,13 @@ using System.Linq;
 using Microsoft.VisualStudio.Shell.Settings;
 using Microsoft.VisualStudio.Settings;
 using System.Windows.Threading;
+using CodeBlockEndTag.Converters;
+using CodeBlockEndTag.Model;
 
-namespace CodeBlockEndTag;
+namespace CodeBlockEndTag.OptionPage;
 
 [Guid("B009CDB7-6900-47DC-8403-285191252811")]
-public class CBEOptionPage : DialogPage
+public partial class CBEOptionPage : DialogPage
 {
     // Name of settings collection where bit array is stored
     private const string CollectionName = "CodeBlockEndTag";
@@ -99,7 +101,7 @@ public class CBEOptionPage : DialogPage
     /// </summary>
     public bool CBETaggerEnabled
     {
-        get { return cbeTaggerEnabled; }
+        get => cbeTaggerEnabled;
         set
         {
             if (cbeTaggerEnabled != value)
@@ -116,7 +118,7 @@ public class CBEOptionPage : DialogPage
     /// </summary>
     public int CBEDisplayMode
     {
-        get { return cbeDisplayMode; }
+        get => cbeDisplayMode;
         set
         {
             if (cbeDisplayMode != value)
@@ -128,19 +130,12 @@ public class CBEOptionPage : DialogPage
     }
     private int cbeDisplayMode = (int)DisplayModes.IconAndText;
 
-    public enum DisplayModes : int
-    {
-        Text = 1,
-        Icon = 2,
-        IconAndText = 3
-    }
-
     /// <summary>
     /// Gets or sets the option: Navigate on (Single-Click / Double-Click / CTRL+Click)
     /// </summary>
     public int CBEClickMode
     {
-        get { return cbeClickMode; }
+        get => cbeClickMode;
         set
         {
             if (cbeClickMode != value)
@@ -152,19 +147,12 @@ public class CBEOptionPage : DialogPage
     }
     private int cbeClickMode = (int)ClickMode.SingleClick;
 
-    public enum ClickMode : int
-    {
-        SingleClick = 1,
-        DoubleClick = 2,
-        CtrlClick = 3
-    }
-
     /// <summary>
     /// Gets or sets the option: Show Tags when (Always / Header not visible)
     /// </summary>
     public int CBEVisibilityMode
     {
-        get { return cbeVisibilityMode; }
+        get => cbeVisibilityMode;
         set
         {
             if (cbeVisibilityMode != value)
@@ -175,12 +163,6 @@ public class CBEOptionPage : DialogPage
         }
     }
     private int cbeVisibilityMode = (int)VisibilityModes.HeaderNotVisible;
-
-    public enum VisibilityModes : int
-    {
-        Always = 1,
-        HeaderNotVisible = 2
-    }
 
     #endregion
 
@@ -196,7 +178,9 @@ public class CBEOptionPage : DialogPage
         var userSettingsStore = settingsManager.GetWritableSettingsStore(SettingsScope.UserSettings);
 
         if (!userSettingsStore.CollectionExists(CollectionName))
+        {
             userSettingsStore.CreateCollection(CollectionName);
+        }
 
         var converter = new BoolArrayConverter();
         userSettingsStore.SetString(
@@ -215,7 +199,9 @@ public class CBEOptionPage : DialogPage
         var userSettingsStore = settingsManager.GetWritableSettingsStore(SettingsScope.UserSettings);
 
         if (!userSettingsStore.PropertyExists(CollectionName, nameof(SupportedLangActive)))
+        {
             return;
+        }
 
         var converter = new BoolArrayConverter();
         SupportedLangActive = converter.ConvertFrom(
@@ -234,10 +220,4 @@ public class CBEOptionPage : DialogPage
             return page;
         }
     }
-}
-
-public struct SupportedLang
-{
-    public string Name { get; set; }
-    public string DisplayName { get; set; }
 }

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CodeBlockEndTag;
+namespace CodeBlockEndTag.Model;
 
 internal static class Languages
 {

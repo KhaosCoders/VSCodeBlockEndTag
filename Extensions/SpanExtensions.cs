@@ -1,9 +1,9 @@
 ﻿using Microsoft.VisualStudio.Text;
 using System;
 
-namespace CodeBlockEndTag;
+namespace CodeBlockEndTag.Extensions;
 
-internal static class Extensions
+internal static class SpanExtensions
 {
     /// <summary>
     /// Joins another span with the current one

@@ -14,7 +14,10 @@ internal sealed class FontAndColorRegistrationAttribute : RegistrationAttribute
 
     public override void Register(RegistrationContext context)
     {
-        if (context == null) return;
+        if (context == null)
+        {
+            return;
+        }
 
         context.Log.WriteLine("FontAndColors:    Name:{0}, Category:{1:B}, Package:{2:B}", Name, Category, Provider);
         using var key = context.CreateKey($"FontAndColors\\{Name}");

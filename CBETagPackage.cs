@@ -4,20 +4,23 @@
 // </copyright>
 //------------------------------------------------------------------------------
 
-using System;
-using System.Runtime.InteropServices;
+using CodeBlockEndTag.Model;
+using EnvDTE;
+using EnvDTE80;
+using Microsoft.Internal.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.Shell;
-using Microsoft.VisualStudio.Utilities;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Utilities;
+using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.Globalization;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using EnvDTE;
-using EnvDTE80;
-using Microsoft.Win32;
+using static Microsoft.VisualStudio.Threading.AsyncReaderWriterLock;
 
 namespace CodeBlockEndTag;
 
@@ -42,7 +45,7 @@ namespace CodeBlockEndTag;
 [InstalledProductRegistration("#110", "#112", "1.0", IconResourceID = 400)] // Info on this package for Help/About
 [Guid(CBETagPackage.PackageGuidString)]
 // Add OptionPage to package
-[ProvideOptionPage(typeof(CBEOptionPage), "KC Extensions", "CodeBlock End Tagger", 113, 114, true)]
+[ProvideOptionPage(typeof(OptionPage.CBEOptionPage), "KC Extensions", "CodeBlock End Tagger", 113, 114, true)]
 // Load package at every (including none) project type
 [ProvideAutoLoad(VSConstants.UICONTEXT.NoSolution_string, PackageAutoLoadFlags.BackgroundLoad)]
 [ProvideAutoLoad(VSConstants.UICONTEXT.SolutionExists_string, PackageAutoLoadFlags.BackgroundLoad)]
@@ -71,7 +74,7 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
     /// <summary>
     /// Reference on the package's option page
     /// </summary>
-    private static CBEOptionPage _optionPage;
+    private static OptionPage.CBEOptionPage _optionPage;
 
     /// <summary>
     /// Instance of ActivityLog
@@ -89,19 +92,24 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
     /// <summary>
     /// Gets a list of all possible content types in VisualStudio
     /// </summary>
-    public static IList<IContentType> ContentTypes { get; private set; }
+    public static IList<IContentType> ContentTypes { get; } = [];
 
     /// <summary>
     /// Load the list of content types
     /// </summary>
     internal static void ReadContentTypes(IContentTypeRegistryService ContentTypeRegistryService)
     {
-        if (ContentTypes != null) return;
-        ContentTypes = new List<IContentType>();
+        if (ContentTypes.Count > 0)
+        {
+            return;
+        }
+
         foreach (var ct in ContentTypeRegistryService.ContentTypes)
         {
             if (ct.IsOfType("code"))
+            {
                 ContentTypes.Add(ct);
+            }
         }
     }
 
@@ -109,13 +117,13 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
 
     #region Option Values
 
-    public static int CBEDisplayMode => _optionPage?.CBEDisplayMode ?? (int)CBEOptionPage.DisplayModes.IconAndText;
+    public static int CBEDisplayMode => _optionPage?.CBEDisplayMode ?? (int)DisplayModes.IconAndText;
 
-    public static int CBEVisibilityMode => _optionPage?.CBEVisibilityMode ?? (int)CBEOptionPage.VisibilityModes.Always;
+    public static int CBEVisibilityMode => _optionPage?.CBEVisibilityMode ?? (int)VisibilityModes.Always;
 
     public static bool CBETaggerEnabled => _optionPage?.CBETaggerEnabled ?? false;
 
-    public static int CBEClickMode => _optionPage?.CBEClickMode ?? (int)CBEOptionPage.ClickMode.DoubleClick;
+    public static int CBEClickMode => _optionPage?.CBEClickMode ?? (int)ClickMode.DoubleClick;
 
     #endregion
 
@@ -123,9 +131,10 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
 
     public static async Task<double> GetVsVersionAsync()
     {
+        await Instance.JoinableTaskFactory.SwitchToMainThreadAsync();
         DTE2 dte = (DTE2)await Instance.GetServiceAsync(typeof(DTE));
 
-        if (!double.TryParse(dte.Version, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture.NumberFormat, out double version))
+        if (dte == null || !double.TryParse(dte.Version, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture.NumberFormat, out double version))
         {
             throw new Exception("Can't read Visual Studio Version!");
         }
@@ -134,8 +143,9 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
 
     public static async Task<string> GetVsRegistryRootAsync()
     {
+        await Instance.JoinableTaskFactory.SwitchToMainThreadAsync();
         DTE2 dte = (DTE2)await Instance.GetServiceAsync(typeof(DTE));
-        return dte.RegistryRoot;
+        return dte?.RegistryRoot;
     }
 
     #endregion
@@ -153,25 +163,26 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
         // Switches to the UI thread in order to consume some services used in command initialization
         await JoinableTaskFactory.SwitchToMainThreadAsync(cancellationToken);
 
-        Log = await GetServiceAsync(typeof(SVsActivityLog)) as IVsActivityLog;
-        if (Log == null)
+        var log = await GetServiceAsync(typeof(SVsActivityLog)) as IVsActivityLog;
+        if (log == null)
         {
             return;
         }
 
+        Log = log;
         Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), "InitializeAsync");
 
         // ensure that we have instance
-        new Shell.FontAndColorDefaultsCSharpTags();
+        Shell.FontAndColorDefaultsCSharpTags.EnsureInstance();
 
         Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), "Register IFontAndColorDefaultsProvider");
         ((IServiceContainer)this).AddService(typeof(IFontAndColorDefaultsProvider), this, true);
 
-        _optionPage = (CBEOptionPage)Instance.GetDialogPage(typeof(CBEOptionPage));
+        _optionPage = (OptionPage.CBEOptionPage)Instance.GetDialogPage(typeof(OptionPage.CBEOptionPage));
         _optionPage.OptionChanged += Page_OptionChanged;
 
         // Update taggers, that were initialized before the package
-        PackageOptionChanged?.Invoke(this);
+        Page_OptionChanged(this);
 
         SubscribeForColorChangeEvents();
 
@@ -185,7 +196,7 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
         base.Dispose(disposing);
     }
 
-    private void Page_OptionChanged(object sender) => PackageOptionChanged?.Invoke(this);
+    private void Page_OptionChanged(object _) => PackageOptionChanged?.Invoke(this);
 
     private static void FontAndColorsChanged(object sender, EventArgs args)
     {

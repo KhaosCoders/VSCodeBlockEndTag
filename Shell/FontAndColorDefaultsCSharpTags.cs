@@ -31,7 +31,6 @@ internal class FontAndColorDefaultsCSharpTags : FontAndColorDefaultsBase
 #pragma warning disable VSTHRD010 // Invoke single-threaded types on Main thread
     public FontAndColorDefaultsCSharpTags()
     {
-        Instance = this;
         CategoryGuid = new Guid(CategoryGuidString);
         CategoryName = CategoryNameString;
         Font = CreateFontInfo("Consolas", 9, 1);
@@ -42,4 +41,9 @@ internal class FontAndColorDefaultsCSharpTags : FontAndColorDefaultsBase
 #pragma warning restore VSTHRD010 // Invoke single-threaded types on Main thread
 
     public static FontAndColorDefaultsCSharpTags Instance { get; private set; }
+
+    public static void EnsureInstance()
+    {
+        Instance ??= new FontAndColorDefaultsCSharpTags();
+    }
 }

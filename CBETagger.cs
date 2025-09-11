@@ -1,6 +1,9 @@
 ﻿// Thanks to https://github.com/jaredpar/ControlCharAdornmentSample/blob/master/CharDisplayTaggerSource.cs
 
+using CodeBlockEndTag.Extensions;
+using CodeBlockEndTag.Model;
 using CodeBlockEndTag.Shell;
+using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
@@ -67,7 +70,11 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     internal CBETagger(CBETaggerProvider provider, IWpfTextView textView)
     {
         if (provider == null || textView == null)
+        {
             throw new ArgumentNullException("The arguments of CBETagger can't be null");
+        }
+
+        ThreadHelper.ThrowIfNotOnUIThread();
 
         _TextView = textView;
 
@@ -80,7 +87,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         _TextView.Caret.PositionChanged += Caret_PositionChanged;
 
         // Listen for package events
-        InitializePackage();
+        InitializeCBEPackage();
     }
 
     #endregion
@@ -109,7 +116,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     {
         // remove or update tags in adornment cache
         List<CBAdornmentData> remove = new();
-        foreach (var adornment in _adornmentCache)
+        foreach (CBAdornmentData adornment in _adornmentCache)
         {
             if (!(adornment.HeaderStartPosition > textChange.OldEnd || adornment.EndPosition < textChange.OldPosition))
             {
@@ -117,9 +124,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
             }
             else if (adornment.HeaderStartPosition > textChange.OldEnd)
             {
-                adornment.HeaderStartPosition += textChange.Delta;
-                adornment.StartPosition += textChange.Delta;
-                adornment.EndPosition += textChange.Delta;
+                adornment.Move(textChange.Delta);
             }
         }
 
@@ -144,11 +149,13 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
     IEnumerable<ITagSpan<IntraTextAdornmentTag>> ITagger<IntraTextAdornmentTag>.GetTags(NormalizedSnapshotSpanCollection spans)
     {
+        ThreadHelper.ThrowIfNotOnUIThread();
+
         // Check if content type (language) is supported and active for tagging
         if (CBETagPackage.IsLanguageSupported(_TextView.TextBuffer.ContentType.TypeName))
         {
             // Second chance to hook up events
-            InitializePackage();
+            InitializeCBEPackage();
 
             foreach (var span in spans)
             {
@@ -162,9 +169,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     }
 
     event EventHandler<SnapshotSpanEventArgs> ITagger<IntraTextAdornmentTag>.TagsChanged
-    {
-        add { _changedEvent += value; }
-        remove { _changedEvent -= value; }
+    { add => _changedEvent += value; remove => _changedEvent -= value;
     }
 
     #endregion
@@ -188,7 +193,9 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
             {
                 span = overlap.Value;
                 if (span.Length == 0)
+                {
                     return EmptyTagColllection;
+                }
             }
         }
 
@@ -239,7 +246,10 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                         if (position > 0)
                         {
                             if (snapshot[position - 1] == '/')
+                            {
                                 isSingleLineComment = true;
+                            }
+
                             if (snapshot[position - 1] == '*')
                             {
                                 if (!isMultiLineComment)
@@ -248,7 +258,11 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                                     // Every tag until now was inside a comment
                                     foreach (var tag in list)
                                     {
-                                        RemoveFromCache((tag.Tag.Adornment as CBETagControl)?.AdornmentData);
+                                        CBAdornmentData? adornment = (tag.Tag.Adornment as CBETagControl)?.AdornmentData;
+                                        if (adornment.HasValue)
+                                        {
+                                            RemoveFromCache(adornment.Value);
+                                        }
                                     }
                                     list.Clear();
                                 }
@@ -258,7 +272,10 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                         break;
                     case '*':
                         if (position > 0 && snapshot[position - 1] == '/')
+                        {
                             isMultiLineComment = true;
+                        }
+
                         break;
                     case (char)10:
                         isSingleLineComment = false;
@@ -269,7 +286,9 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 }
 
                 if (chr != '}' || isSingleLineComment || isMultiLineComment)
+                {
                     continue;
+                }
 
                 // getting start and end position of code block
                 cbEndPosition = position;
@@ -288,7 +307,9 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
                 // Don't display tag for code blocks on same line
                 if (!snapshot.GetText(cbSpan).Contains('\n'))
+                {
                     continue;
+                }
 
                 // getting the code blocks header
                 cbHeaderPosition = -1;
@@ -323,7 +344,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 }
 
                 var iconMoniker = Microsoft.VisualStudio.Imaging.KnownMonikers.QuestionMark;
-                if (CBETagPackage.CBEDisplayMode != (int)CBEOptionPage.DisplayModes.Text &&
+                if (CBETagPackage.CBEDisplayMode != (int)DisplayModes.Text &&
                     !string.IsNullOrWhiteSpace(cbHeader) && !cbHeader.Contains("{"))
                 {
                     iconMoniker = IconMonikerSelector.SelectMoniker(cbHeader);
@@ -335,9 +356,9 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                                         o.StartPosition == cbStartPosition &&
                                         o.EndPosition == cbEndPosition);
 
-                if (cbAdornmentData?.Adornment != null)
+                if (cbAdornmentData.Adornment is CBETagControl tagControl)
                 {
-                    tagElement = cbAdornmentData.Adornment as CBETagControl;
+                    tagElement = tagControl;
                 }
                 else
                 {
@@ -416,13 +437,18 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         {
             // abort if in endless loop
             if (loops++ > 10)
+            {
                 break;
+            }
 
             // get text of current span
             headerStart = currentSpan.Start;
             headerSpan = new Span(headerStart, Math.Min(maxEndPosition, currentSpan.Span.End) - headerStart);
             if (headerSpan.Length == 0)
+            {
                 continue;
+            }
+
             headerText = snapshot.GetText(headerSpan);
 
             // found header if it begins with a letter or contains a lambda
@@ -462,7 +488,10 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                             }
                             annotaions = false;
                             if (!string.IsNullOrWhiteSpace(headerText))
+                            {
                                 headerText += Environment.NewLine;
+                            }
+
                             headerText += trimmedline;
                         }
                     }
@@ -545,9 +574,14 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     /// Due to AsyncPackage usage, the Tagger may be initialized before the Package
     /// So be safe about this
     /// </summary>
-    private void InitializePackage()
+    private void InitializeCBEPackage()
     {
-        if (isPackageInitialized || CBETagPackage.Instance == null || _Disposed) return;
+        if (isPackageInitialized || CBETagPackage.Instance == null || _Disposed)
+        {
+            return;
+        }
+
+        ThreadHelper.ThrowIfNotOnUIThread();
 
         CBETagPackage.Instance.PackageOptionChanged += OnPackageOptionChanged;
         FontAndColorDefaultsCSharpTags.Instance.EnsureFontAndColorsInitialized();
@@ -610,7 +644,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     {
         bool isVisible = false;
         // Check general condition
-        if (CBETagPackage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always
+        if (CBETagPackage.CBEVisibilityMode == (int)VisibilityModes.Always
             || visibleSpan == null || !visibleSpan.HasValue)
         {
             isVisible = true;
@@ -635,7 +669,9 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
             {
                 string line = snapshot.GetText(lineStart, lineEnd - lineStart);
                 if (!line.Contains('\n'))
+                {
                     isVisible = false;
+                }
             }
         }
         return isVisible;
@@ -667,7 +703,9 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         // get new visible span
         var visibleSpan = GetVisibleSpan(_TextView);
         if (visibleSpan == null || !visibleSpan.HasValue)
+        {
             return;
+        }
 
         // only if new visible span is different from old
         if (!_VisibleSpan.HasValue ||
@@ -702,8 +740,10 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
             // refresh tags
             foreach (var span in invalidSpans)
             {
-                if (CBETagPackage.CBEVisibilityMode != (int)CBEOptionPage.VisibilityModes.Always)
+                if (CBETagPackage.CBEVisibilityMode != (int)VisibilityModes.Always)
+                {
                     InvalidateSpan(span, false);
+                }
             }
         }
     }

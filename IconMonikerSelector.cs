@@ -42,16 +42,25 @@ internal sealed class IconMonikerSelector
     public static ImageMoniker SelectMoniker(string header)
     {
         ImageMoniker icon = KnownMonikers.QuestionMark;
-        if (string.IsNullOrWhiteSpace(header)) return icon;
+        if (string.IsNullOrWhiteSpace(header))
+        {
+            return icon;
+        }
 
         // split words of header
         string[] words = header.Split(' ');
-        if (words.Length == 0) return icon;
+        if (words.Length == 0)
+        {
+            return icon;
+        }
 
         // find first visibility modifier
         string modifier = GetModifier(words, out int modifierCount);
         int keywordIndex = modifierCount;
-        if (words.Length <= keywordIndex) return icon;
+        if (words.Length <= keywordIndex)
+        {
+            return icon;
+        }
 
         // take first keyword
         string keyword = words[keywordIndex].ToLower();
@@ -70,7 +79,9 @@ internal sealed class IconMonikerSelector
 
         // setup keyword icons
         if (iconSelectors.Count == 0)
+        {
             InitIconSelectors();
+        }
 
         // get icon by keyword
         if (iconSelectors.ContainsKey(keyword))
@@ -215,7 +226,10 @@ internal sealed class IconMonikerSelector
             {
                 modifierCount++;
                 if (string.IsNullOrWhiteSpace(modifier))
+                {
                     modifier = word;
+                }
+
                 continue;
             }
             break;

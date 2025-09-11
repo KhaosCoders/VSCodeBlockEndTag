@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Windows.Forms;
+using CodeBlockEndTag.Model;
 using Microsoft.Internal.VisualStudio.Shell.Interop;
 
-namespace CodeBlockEndTag;
+namespace CodeBlockEndTag.OptionPage;
 
 public partial class CBEOptionPageControl : UserControl
 {
@@ -19,18 +20,27 @@ public partial class CBEOptionPageControl : UserControl
 
     public void Initialize()
     {
+        LoadOptionsToUI();
+        LoadSupportedLanguagesToUI();
+    }
+
+    private void LoadOptionsToUI()
+    {
         chkCBETaggerEnabled.Checked = optionsPage.CBETaggerEnabled;
-        rdbAlways.Checked = optionsPage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.Always;
-        rdbHeaderInvisible.Checked = optionsPage.CBEVisibilityMode == (int)CBEOptionPage.VisibilityModes.HeaderNotVisible;
+        rdbAlways.Checked = optionsPage.CBEVisibilityMode == (int)VisibilityModes.Always;
+        rdbHeaderInvisible.Checked = optionsPage.CBEVisibilityMode == (int)VisibilityModes.HeaderNotVisible;
 
-        rdbSingleClick.Checked = optionsPage.CBEClickMode == (int)CBEOptionPage.ClickMode.SingleClick;
-        rdbDoubleClick.Checked = optionsPage.CBEClickMode == (int)CBEOptionPage.ClickMode.DoubleClick;
-        rdbCtrlClick.Checked = optionsPage.CBEClickMode == (int)CBEOptionPage.ClickMode.CtrlClick;
+        rdbSingleClick.Checked = optionsPage.CBEClickMode == (int)ClickMode.SingleClick;
+        rdbDoubleClick.Checked = optionsPage.CBEClickMode == (int)ClickMode.DoubleClick;
+        rdbCtrlClick.Checked = optionsPage.CBEClickMode == (int)ClickMode.CtrlClick;
 
-        rdbIconAndText.Checked = optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.IconAndText;
-        rdbIconOnly.Checked = optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.Icon;
-        rdbTextOnly.Checked = optionsPage.CBEDisplayMode == (int)CBEOptionPage.DisplayModes.Text;
+        rdbIconAndText.Checked = optionsPage.CBEDisplayMode == (int)DisplayModes.IconAndText;
+        rdbIconOnly.Checked = optionsPage.CBEDisplayMode == (int)DisplayModes.Icon;
+        rdbTextOnly.Checked = optionsPage.CBEDisplayMode == (int)DisplayModes.Text;
+    }
 
+    private void LoadSupportedLanguagesToUI()
+    {
         lviLanguages.Items.Clear();
         string[] langs = optionsPage.SupportedLangDisplayNames;
         for (int i = 0; i < langs.Length; i++)
@@ -62,7 +72,7 @@ public partial class CBEOptionPageControl : UserControl
     {
         if (rdbAlways.Checked)
         {
-            optionsPage.CBEVisibilityMode = (int)CBEOptionPage.VisibilityModes.Always;
+            optionsPage.CBEVisibilityMode = (int)VisibilityModes.Always;
         }
     }
 
@@ -70,7 +80,7 @@ public partial class CBEOptionPageControl : UserControl
     {
         if (rdbHeaderInvisible.Checked)
         {
-            optionsPage.CBEVisibilityMode = (int)CBEOptionPage.VisibilityModes.HeaderNotVisible;
+            optionsPage.CBEVisibilityMode = (int)VisibilityModes.HeaderNotVisible;
         }
     }
 
@@ -78,7 +88,7 @@ public partial class CBEOptionPageControl : UserControl
     {
         if (rdbSingleClick.Checked)
         {
-            optionsPage.CBEClickMode = (int)CBEOptionPage.ClickMode.SingleClick;
+            optionsPage.CBEClickMode = (int)ClickMode.SingleClick;
         }
     }
 
@@ -86,7 +96,7 @@ public partial class CBEOptionPageControl : UserControl
     {
         if (rdbDoubleClick.Checked)
         {
-            optionsPage.CBEClickMode = (int)CBEOptionPage.ClickMode.DoubleClick;
+            optionsPage.CBEClickMode = (int)ClickMode.DoubleClick;
         }
     }
 
@@ -94,7 +104,7 @@ public partial class CBEOptionPageControl : UserControl
     {
         if (rdbCtrlClick.Checked)
         {
-            optionsPage.CBEClickMode = (int)CBEOptionPage.ClickMode.CtrlClick;
+            optionsPage.CBEClickMode = (int)ClickMode.CtrlClick;
         }
     }
 
@@ -102,7 +112,7 @@ public partial class CBEOptionPageControl : UserControl
     {
         if (rdbIconAndText.Checked)
         {
-            optionsPage.CBEDisplayMode = (int)CBEOptionPage.DisplayModes.IconAndText;
+            optionsPage.CBEDisplayMode = (int)DisplayModes.IconAndText;
         }
     }
 
@@ -110,7 +120,7 @@ public partial class CBEOptionPageControl : UserControl
     {
         if (rdbIconOnly.Checked)
         {
-            optionsPage.CBEDisplayMode = (int)CBEOptionPage.DisplayModes.Icon;
+            optionsPage.CBEDisplayMode = (int)DisplayModes.Icon;
         }
     }
 
@@ -118,7 +128,7 @@ public partial class CBEOptionPageControl : UserControl
     {
         if (rdbTextOnly.Checked)
         {
-            optionsPage.CBEDisplayMode = (int)CBEOptionPage.DisplayModes.Text;
+            optionsPage.CBEDisplayMode = (int)DisplayModes.Text;
         }
     }
 
