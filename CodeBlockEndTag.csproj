@@ -94,6 +94,7 @@
     <Compile Include="Shell\FontAndColorDefaultsCSharpTags.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".editorconfig" />
     <None Include="app.config" />
     <None Include="Key.snk" />
     <None Include="README.md" />
