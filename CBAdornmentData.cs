@@ -1,21 +1,20 @@
 ﻿using System.Windows;
 
-namespace CodeBlockEndTag
+namespace CodeBlockEndTag;
+
+internal class CBAdornmentData
 {
-    internal class CBAdornmentData
+    internal int StartPosition;
+    internal int EndPosition;
+    internal int HeaderStartPosition;
+
+    internal readonly UIElement Adornment;
+
+    internal CBAdornmentData(int start, int end, int headerStart, UIElement adornment)
     {
-        internal int StartPosition;
-        internal int EndPosition;
-        internal int HeaderStartPosition;
-
-        internal readonly UIElement Adornment;
-
-        internal CBAdornmentData(int start, int end, int headerStart, UIElement adornment)
-        {
-            StartPosition = start;
-            EndPosition = end;
-            HeaderStartPosition = headerStart;
-            Adornment = adornment;
-        }
+        StartPosition = start;
+        EndPosition = end;
+        HeaderStartPosition = headerStart;
+        Adornment = adornment;
     }
 }

@@ -2,133 +2,132 @@
 using System.Collections.Generic;
 using Microsoft.VisualStudio.TextManager.Interop;
 
-namespace Microsoft.VisualStudio.Shell.Interop
+namespace Microsoft.VisualStudio.Shell.Interop;
+
+internal abstract class VsColor
 {
-    internal abstract class VsColor
+    public abstract bool TryGetValue(out uint result);
+
+    public static bool TryGetValue(IEnumerable<VsColor> colors, out uint result)
     {
-        public abstract bool TryGetValue(out uint result);
+        ThreadHelper.ThrowIfNotOnUIThread();
 
-        public static bool TryGetValue(IEnumerable<VsColor> colors, out uint result)
+        if (colors == null)
         {
-            ThreadHelper.ThrowIfNotOnUIThread();
+            throw new ArgumentNullException(nameof(colors));
+        }
 
-            if (colors == null)
+        foreach (var color in colors)
+        {
+            if (color.TryGetValue(out result))
             {
-                throw new ArgumentNullException(nameof(colors));
+                return true;
             }
-
-            foreach (var color in colors)
-            {
-                if (color.TryGetValue(out result))
-                {
-                    return true;
-                }
-            }
-
-            result = 0;
-            return false;
         }
+
+        result = 0;
+        return false;
     }
+}
 
-    internal sealed class AutoColor : VsColor
+internal sealed class AutoColor : VsColor
+{
+    public override bool TryGetValue(out uint result)
     {
-        public override bool TryGetValue(out uint result)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
+        ThreadHelper.ThrowIfNotOnUIThread();
 
-            return ErrorHandler.Succeeded(Services.FontAndColorUtilities.EncodeAutomaticColor(out result));
-        }
+        return ErrorHandler.Succeeded(Services.FontAndColorUtilities.EncodeAutomaticColor(out result));
     }
+}
 
-    internal sealed class IndexedColor : VsColor
+internal sealed class IndexedColor : VsColor
+{
+    private readonly COLORINDEX _index;
+
+    public IndexedColor(COLORINDEX index)
     {
-        private readonly COLORINDEX _index;
-
-        public IndexedColor(COLORINDEX index)
-        {
-            _index = index;
-        }
-        public override bool TryGetValue(out uint result)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            return ErrorHandler.Succeeded(Services.FontAndColorUtilities.GetRGBOfIndex(_index, out result));
-        }
+        _index = index;
     }
-
-    internal sealed class RgbColor : VsColor
+    public override bool TryGetValue(out uint result)
     {
-        private readonly uint _value;
+        ThreadHelper.ThrowIfNotOnUIThread();
 
-        public RgbColor(byte r, byte b, byte g)
-        {
-            _value = (uint)(r | (g << 8) | (b << 16));
-        }
-        public override bool TryGetValue(out uint result)
-        {
-            result = _value;
-            return true;
-        }
+        return ErrorHandler.Succeeded(Services.FontAndColorUtilities.GetRGBOfIndex(_index, out result));
     }
+}
 
-    internal sealed class SysColor : VsColor
+internal sealed class RgbColor : VsColor
+{
+    private readonly uint _value;
+
+    public RgbColor(byte r, byte b, byte g)
     {
-        private readonly int _index;
-
-        public SysColor(int index)
-        {
-            _index = index;
-        }
-        public override bool TryGetValue(out uint result)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            result = 0xff000000 | (uint)SafeNativeMethods.GetSysColor(_index);
-            return true;
-        }
+        _value = (uint)(r | (g << 8) | (b << 16));
     }
-
-    internal sealed class VsSysColor : VsColor
+    public override bool TryGetValue(out uint result)
     {
-        private readonly int _index;
-
-        public VsSysColor(__VSSYSCOLOREX index)
-        {
-            _index = (int)index;
-        }
-        public VsSysColor(__VSSYSCOLOREX2 index)
-        {
-            _index = (int)index;
-        }
-        public VsSysColor(__VSSYSCOLOREX3 index)
-        {
-            _index = (int)index;
-        }
-        public override bool TryGetValue(out uint result)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-
-            return ErrorHandler.Succeeded(Services.VsUIShell2.GetVSSysColorEx(_index, out result));
-        }
+        result = _value;
+        return true;
     }
+}
 
-    internal sealed class ThemeColor : VsColor
+internal sealed class SysColor : VsColor
+{
+    private readonly int _index;
+
+    public SysColor(int index)
     {
-        private readonly Guid _colorCategory;
-        private readonly string _colorName;
-        private readonly __THEMEDCOLORTYPE _colorType;
+        _index = index;
+    }
+    public override bool TryGetValue(out uint result)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
 
-        public ThemeColor(ThemeResourceKey key)
-        {
-            _colorCategory = key.Category;
-            _colorName = key.Name;
-            _colorType = key.KeyType is ThemeResourceKeyType.BackgroundBrush or ThemeResourceKeyType.BackgroundColor ? __THEMEDCOLORTYPE.TCT_Background : __THEMEDCOLORTYPE.TCT_Foreground;
-        }
-        public override bool TryGetValue(out uint result)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
+        result = 0xff000000 | (uint)SafeNativeMethods.GetSysColor(_index);
+        return true;
+    }
+}
 
-            return Services.TryGetThemeColor(_colorCategory, _colorName, _colorType, out result);
-        }
+internal sealed class VsSysColor : VsColor
+{
+    private readonly int _index;
+
+    public VsSysColor(__VSSYSCOLOREX index)
+    {
+        _index = (int)index;
+    }
+    public VsSysColor(__VSSYSCOLOREX2 index)
+    {
+        _index = (int)index;
+    }
+    public VsSysColor(__VSSYSCOLOREX3 index)
+    {
+        _index = (int)index;
+    }
+    public override bool TryGetValue(out uint result)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+
+        return ErrorHandler.Succeeded(Services.VsUIShell2.GetVSSysColorEx(_index, out result));
+    }
+}
+
+internal sealed class ThemeColor : VsColor
+{
+    private readonly Guid _colorCategory;
+    private readonly string _colorName;
+    private readonly __THEMEDCOLORTYPE _colorType;
+
+    public ThemeColor(ThemeResourceKey key)
+    {
+        _colorCategory = key.Category;
+        _colorName = key.Name;
+        _colorType = key.KeyType is ThemeResourceKeyType.BackgroundBrush or ThemeResourceKeyType.BackgroundColor ? __THEMEDCOLORTYPE.TCT_Background : __THEMEDCOLORTYPE.TCT_Foreground;
+    }
+    public override bool TryGetValue(out uint result)
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+
+        return Services.TryGetThemeColor(_colorCategory, _colorName, _colorType, out result);
     }
 }

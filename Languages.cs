@@ -4,10 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CodeBlockEndTag
+namespace CodeBlockEndTag;
+
+internal static class Languages
 {
-    internal static class Languages
-    {
-        public const string CSharp = "CSharp";
-    }
+    public const string CSharp = "CSharp";
 }
