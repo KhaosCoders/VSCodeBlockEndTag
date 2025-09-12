@@ -13,6 +13,7 @@ using CodeBlockEndTag.Model;
 namespace CodeBlockEndTag.OptionPage;
 
 [Guid("B009CDB7-6900-47DC-8403-285191252811")]
+[ComVisible(true)]
 public partial class CBEOptionPage : DialogPage
 {
     // Name of settings collection where bit array is stored
