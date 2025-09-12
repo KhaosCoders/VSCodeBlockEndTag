@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Windows;
 using CodeBlockEndTag;
 
 
@@ -16,6 +17,12 @@ using CodeBlockEndTag;
 
 [assembly: AssemblyVersion(Vsix.Version)]
 [assembly: AssemblyFileVersion(Vsix.Version)]
+
+// Ensure WPF looks for default styles in Themes/Generic.xaml
+[assembly: ThemeInfo(
+    ResourceDictionaryLocation.None, //where theme specific resource dictionaries are located
+    ResourceDictionaryLocation.SourceAssembly //where the generic resource dictionary is located
+)]
 
 namespace System.Runtime.CompilerServices
 {
