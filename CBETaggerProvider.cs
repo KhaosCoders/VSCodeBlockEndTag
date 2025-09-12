@@ -3,7 +3,6 @@ using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
-using Microsoft.VisualStudio.Editor;
 using System.ComponentModel.Composition;
 
 namespace CodeBlockEndTag;
@@ -39,16 +38,17 @@ internal class CBETaggerProvider : IViewTaggerProvider
     /// </summary>
     public ITagger<T> CreateTagger<T>(ITextView textView, ITextBuffer buffer) where T : ITag
     {
-        // only works with IWpfTextView
-        if (textView is not IWpfTextView wpfTextView)
-        {
-            return null;
-        }
-
         // provide the tag only on the top-level buffer
         if (textView.TextBuffer != buffer)
         {
             return null;
+        }
+
+        // only works with IWpfTextView
+        if (textView is not IWpfTextView wpfTextView)
+        {
+            return null;
+
         }
 
         // return new instance of CBETagger

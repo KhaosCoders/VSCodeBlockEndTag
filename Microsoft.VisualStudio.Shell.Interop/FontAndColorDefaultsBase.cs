@@ -107,7 +107,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
             }
             catch (Exception e)
             {
-                CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(), $"CreateColorInfo Error: {e}");
+                CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, ToString(), $"CreateColorInfo Error: {e}");
                 throw;
             }
         }
@@ -139,7 +139,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
                     {
                         var brush = new SolidColorBrush(foregroundColor.Value);
 
-                        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(),
+                        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(),
                             $"UpdateResources Name: {Name} Color: {foregroundColor.Value}");
                         brush.Freeze();
                         resources[key] = brush;
@@ -153,7 +153,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
             }
             catch (Exception e)
             {
-                CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(), $"UpdateResources Error: {e}");
+                CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, ToString(), $"UpdateResources Error: {e}");
                 throw;
             }
         }
@@ -164,7 +164,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
 
     protected FontAndColorDefaultsBase()
     {
-        _resourceDictionary = new ResourceDictionary();
+        _resourceDictionary = [];
         Application.Current.Resources.MergedDictionaries.Add(_resourceDictionary);
     }
 
@@ -182,7 +182,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
 
     public void ReloadFontAndColors()
     {
-        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(),
+        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(),
             $"ReloadFontAndColors");
         ThreadHelper.ThrowIfNotOnUIThread();
 
@@ -199,7 +199,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
 
         if (!ErrorHandler.Succeeded(colorStorage.OpenCategory(ref categoryGuid, fflags)))
         {
-            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(),
+            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, ToString(),
                 $"Unable to open category {categoryGuid} in color storage");
             return;
         }
@@ -232,7 +232,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
                 var pColorInfo = new ColorableItemInfo[1];
                 if (!ErrorHandler.Succeeded(colorStorage.GetItem(colorEntry.Name, pColorInfo)))
                 {
-                    CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(),
+                    CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, ToString(),
                         $"Can't find color {colorEntry.Name} in color storage");
                     if (colorEntry.DefaultForeground.Any() && colorEntry.DefaultForeground.First().TryGetValue(out var foreground))
                     {
@@ -253,7 +253,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
                     if (pColorInfo[0].bForegroundValid == 1)
                     {
                         foregroundColor = Services.CreateWpfColor(pColorInfo[0].crForeground);
-                        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(),
+                        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(),
                             $"ReloadFontAndColors {pColorInfo[0].crForeground} => {foregroundColor}");
                     }
                 }
@@ -263,7 +263,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
         }
         catch (Exception e)
         {
-            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(), $"ReloadFontAndColors Error: {e}");
+            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, ToString(), $"ReloadFontAndColors Error: {e}");
             throw;
         }
         finally
@@ -306,22 +306,22 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
 
     int IVsFontAndColorDefaults.GetItem(int index, AllColorableItemInfo[] info)
     {
-        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"GetItem: {index}");
+        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), $"GetItem: {index}");
         try
         {
             if (0 > index || index >= ColorEntries.Count)
             {
-                CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(), $"GetItem: failed");
+                CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, ToString(), $"GetItem: failed");
                 return -2147467259;
             }
 
             info[0] = ColorEntries[index].CreateColorInfo();
-            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"GetItem: Ok");
+            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), $"GetItem: Ok");
             return 0;
         }
         catch (Exception e)
         {
-            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, this.ToString(), $"GetItem Error: {e}");
+            CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, ToString(), $"GetItem Error: {e}");
             throw;
         }
     }
@@ -343,7 +343,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
 
     int IVsFontAndColorDefaults.GetItemCount(out int items)
     {
-        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"GetItemCount: {ColorEntries.Count}");
+        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), $"GetItemCount: {ColorEntries.Count}");
         items = ColorEntries.Count;
         return 0;
     }
@@ -360,7 +360,7 @@ internal abstract class FontAndColorDefaultsBase : IVsFontAndColorDefaults, IVsF
 #pragma warning disable VSTHRD010 // Invoke single-threaded types on Main thread
     int IVsFontAndColorEvents.OnApply()
     {
-        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"OnApply");
+        CBETagPackage.Instance.Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), $"OnApply");
         ReloadFontAndColors();
         return 0;
     }

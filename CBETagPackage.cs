@@ -170,12 +170,12 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
         }
 
         Log = log;
-        Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), "InitializeAsync");
+        Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), "InitializeAsync");
 
         // ensure that we have instance
         Shell.FontAndColorDefaultsCSharpTags.EnsureInstance();
 
-        Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), "Register IFontAndColorDefaultsProvider");
+        Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), "Register IFontAndColorDefaultsProvider");
         ((IServiceContainer)this).AddService(typeof(IFontAndColorDefaultsProvider), this, true);
 
         _optionPage = (OptionPage.CBEOptionPage)Instance.GetDialogPage(typeof(OptionPage.CBEOptionPage));
@@ -186,7 +186,7 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
 
         SubscribeForColorChangeEvents();
 
-        Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), "InitializeAsync ended");
+        Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), "InitializeAsync ended");
     }
 
     protected override void Dispose(bool disposing)
@@ -224,12 +224,12 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
     #region IVsFontAndColorDefaultsProvider
     public int GetObject(ref Guid rguidCategory, out object ppObj)
     {
-        Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"GetObject {rguidCategory}");
+        Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), $"GetObject {rguidCategory}");
         ThreadHelper.ThrowIfNotOnUIThread();
 
         ppObj = rguidCategory == Shell.FontAndColorDefaultsCSharpTags.Instance.CategoryGuid ? Shell.FontAndColorDefaultsCSharpTags.Instance : null;
 
-        Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, this.ToString(), $"GetObject {rguidCategory} obj: {ppObj}");
+        Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), $"GetObject {rguidCategory} obj: {ppObj}");
         return 0;
     }
     #endregion

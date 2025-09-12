@@ -98,7 +98,7 @@ abstract class ThemeColorsBase
 
     protected ThemeColorsBase()
     {
-        _resourceDictionary = new ResourceDictionary();
+        _resourceDictionary = [];
         Application.Current.Resources.MergedDictionaries.Add(_resourceDictionary);
     }
 

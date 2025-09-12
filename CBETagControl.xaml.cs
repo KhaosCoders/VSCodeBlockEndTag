@@ -16,21 +16,23 @@ namespace CodeBlockEndTag;
 /// </summary>
 public partial class CBETagControl : UserControl
 {
+    private static readonly Type _typeofThis = typeof(CBETagControl);
+
     public string Text
     {
         get => (string)GetValue(TextProperty);
         set => SetValue(TextProperty, value);
     }
     public static readonly DependencyProperty TextProperty =
-        DependencyProperty.Register("Text", typeof(string), typeof(CBETagControl), new PropertyMetadata("Unknown"));
+        DependencyProperty.Register("Text", typeof(string), _typeofThis, new PropertyMetadata("Unknown"));
 
     public object TextColor
     {
-        get => (object)GetValue(TextColorProperty);
+        get => GetValue(TextColorProperty);
         set => SetValue(TextColorProperty, value);
     }
     public static readonly DependencyProperty TextColorProperty = DependencyProperty.Register(
-        "TextColor", typeof(object), typeof(CBETagControl), new PropertyMetadata(Colors.Black));
+        "TextColor", typeof(object), _typeofThis, new PropertyMetadata(Colors.Black));
 
     public ImageMoniker IconMoniker
     {
@@ -38,7 +40,7 @@ public partial class CBETagControl : UserControl
         set => SetValue(IconMonikerProperty, value);
     }
     public static readonly DependencyProperty IconMonikerProperty =
-        DependencyProperty.Register("IconMoniker", typeof(ImageMoniker), typeof(CBETagControl), new PropertyMetadata(KnownMonikers.QuestionMark));
+        DependencyProperty.Register("IconMoniker", typeof(ImageMoniker), _typeofThis, new PropertyMetadata(KnownMonikers.QuestionMark));
 
     public int DisplayMode
     {
@@ -46,7 +48,7 @@ public partial class CBETagControl : UserControl
         set => SetValue(DisplayModeProperty, value);
     }
     public static readonly DependencyProperty DisplayModeProperty =
-        DependencyProperty.Register("DisplayMode", typeof(int), typeof(CBETagControl), new PropertyMetadata(0));
+        DependencyProperty.Register("DisplayMode", typeof(int), _typeofThis, new PropertyMetadata(0));
 
     public double LineHeight
     {
@@ -54,7 +56,7 @@ public partial class CBETagControl : UserControl
         set => SetValue(LineHeightProperty, value);
     }
     public static readonly DependencyProperty LineHeightProperty =
-        DependencyProperty.Register("LineHeight", typeof(double), typeof(CBETagControl), new PropertyMetadata(9d));
+        DependencyProperty.Register("LineHeight", typeof(double), _typeofThis, new PropertyMetadata(9d));
 
     internal CBAdornmentData? AdornmentData { get; set; }
 
@@ -92,15 +94,12 @@ public partial class CBETagControl : UserControl
     private void Button_Click(object sender, RoutedEventArgs e)
     {
         buttonModifiersPressed = CheckModifiers();
-        if (buttonSingleClickTimeout == null)
-        {
-            buttonSingleClickTimeout =
+        buttonSingleClickTimeout ??=
             new DispatcherTimer(
                 TimeSpan.FromSeconds(0.25),
                 DispatcherPriority.Background,
                 ButtonSingleClick,
                 Dispatcher.CurrentDispatcher);
-        }
 
         buttonSingleClickTimeout.Start();
     }
@@ -114,30 +113,28 @@ public partial class CBETagControl : UserControl
 
     private void ButtonClicked(int clickCount)
     {
+        if (!AdornmentData.HasValue)
+        {
+            return;
+        }
+
         int neededClickCount = CBETagPackage.CBEClickMode switch
         {
             (int)Model.ClickMode.SingleClick or (int)Model.ClickMode.CtrlClick => 1,
             (int)Model.ClickMode.DoubleClick => 2,
             _ => 0,
         };
-        if (AdornmentData.HasValue)
-        {
-            bool jumpToHead = (clickCount >= neededClickCount) && buttonModifiersPressed;
-            TagClicked?.Invoke(AdornmentData.Value, jumpToHead);
-        }
+        bool jumpToHead = (clickCount >= neededClickCount) && buttonModifiersPressed;
+        TagClicked?.Invoke(AdornmentData.Value, jumpToHead);
     }
 
-    private bool CheckModifiers()
-    {
-        return CBETagPackage.CBEClickMode != (int)Model.ClickMode.CtrlClick
+    private bool CheckModifiers() =>
+        CBETagPackage.CBEClickMode != (int)Model.ClickMode.CtrlClick
             || Keyboard.IsKeyDown(Key.LeftCtrl)
             || Keyboard.IsKeyDown(Key.RightCtrl);
-    }
 
     private void TxtTag_OnInitialized(object sender, EventArgs e)
     {
-        this.InvalidateMeasure();
-
-        TextBlock tb = btnTag.Template.FindName("txtTag", btnTag) as TextBlock;
+        InvalidateMeasure();
     }
 }

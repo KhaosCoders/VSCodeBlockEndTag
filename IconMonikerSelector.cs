@@ -10,8 +10,14 @@ using System.Collections.Generic;
 
 namespace CodeBlockEndTag;
 
+/// <summary>
+/// Provides functionality to select appropriate Visual Studio icon monikers based on code header text.
+/// This class analyzes code constructs and returns corresponding Visual Studio icons for display purposes.
+/// </summary>
 internal sealed class IconMonikerSelector
 {
+    #region Modifier Constants
+
     private const string ModifierPublic = "public";
     private const string ModifierPrivate = "private";
     private const string ModifierProtected = "protected";
@@ -28,17 +34,38 @@ internal sealed class IconMonikerSelector
     private const string ModifierMutable = "mutable";
     private const string ModifierVirtual = "virtual";
 
-    private static readonly string[] Modifiers = new string[]
-    {
+    #endregion
+
+    /// <summary>
+    /// Array containing all recognized modifier keywords for parsing code headers.
+    /// </summary>
+    private static readonly string[] Modifiers =
+    [
         ModifierPublic, ModifierPrivate, ModifierProtected, ModifierInternal,
         ModifierSealed, ModifierPartial, ModifierStatic, ModifierConst, ModifierReadonly,
         ModifierExplicit, ModifierFriend, ModifierInline, ModifierVolatile, ModifierMutable,
         ModifierVirtual
-    };
+    ];
 
+    /// <summary>
+    /// Delegate type for icon selector functions that take a keyword and modifier and return an ImageMoniker.
+    /// </summary>
+    /// <param name="keyword">The keyword from the code header.</param>
+    /// <param name="modifier">The access modifier from the code header.</param>
+    /// <returns>The appropriate ImageMoniker for the given keyword and modifier combination.</returns>
     private delegate ImageMoniker IconSelector(string keyword, string modifier);
-    private static readonly Dictionary<string, IconSelector> iconSelectors = new();
 
+    /// <summary>
+    /// Dictionary mapping keywords to their corresponding icon selector functions.
+    /// </summary>
+    private static readonly Dictionary<string, IconSelector> iconSelectors = [];
+
+    /// <summary>
+    /// Selects the appropriate Visual Studio icon moniker based on the provided code header text.
+    /// Analyzes the header to identify the code construct type and access modifiers.
+    /// </summary>
+    /// <param name="header">The code header text to analyze (e.g., "public class MyClass").</param>
+    /// <returns>An ImageMoniker representing the appropriate icon for the code construct.</returns>
     public static ImageMoniker SelectMoniker(string header)
     {
         ImageMoniker icon = KnownMonikers.QuestionMark;
@@ -122,6 +149,10 @@ internal sealed class IconMonikerSelector
         return icon;
     }
 
+    /// <summary>
+    /// Initializes the icon selector dictionary with mappings from keywords to their corresponding icon selection functions.
+    /// Supports C#, C/C++, and PowerShell language constructs.
+    /// </summary>
     private static void InitIconSelectors()
     {
         iconSelectors.Add("namespace", new IconSelector((_, __) => KnownMonikers.Namespace));
@@ -216,6 +247,12 @@ internal sealed class IconMonikerSelector
         iconSelectors.Add("trap", new IconSelector((_, __) => KnownMonikers.TryCatch));
     }
 
+    /// <summary>
+    /// Extracts the first access modifier from the provided words array and counts total modifiers.
+    /// </summary>
+    /// <param name="words">Array of words from the code header.</param>
+    /// <param name="modifierCount">Output parameter containing the total number of modifiers found.</param>
+    /// <returns>The first access modifier found, or an empty string if none are found.</returns>
     private static string GetModifier(string[] words, out int modifierCount)
     {
         string modifier = string.Empty;
