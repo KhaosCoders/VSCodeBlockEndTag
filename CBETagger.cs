@@ -44,7 +44,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     /// <summary>
     /// This is a list of already created adornment tags used as cache
     /// </summary>
-    private readonly List<CBAdornmentData> _adornmentCache = [];
+    private readonly List<CBAdornmentData> _adornmentCache = new(50);
 
     /// <summary>
     /// This is the visible span of the textview
@@ -98,7 +98,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         var end = Math.Max(e.OldPosition.BufferPosition.Position, e.NewPosition.BufferPosition.Position);
         if (start != end)
         {
-            InvalidateSpan(new Span(start, end - start), false);
+            InvalidateSpan(Span.FromBounds(start, end), false);
         }
     }
 
@@ -113,32 +113,28 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     private void OnTextChanged(ITextChange textChange)
     {
         // remove or update tags in adornment cache
-        List<CBAdornmentData> remove = [];
-        foreach (CBAdornmentData adornment in _adornmentCache)
-        {
-            if (!(adornment.HeaderStartPosition > textChange.OldEnd || adornment.EndPosition < textChange.OldPosition))
-            {
-                remove.Add(adornment);
-            }
-            else if (adornment.HeaderStartPosition > textChange.OldEnd)
-            {
-                adornment.Move(textChange.Delta);
-            }
-        }
+        int oldEnd = textChange.OldEnd;
+        int oldPosition = textChange.OldPosition;
+        int delta = textChange.Delta;
 
-        foreach (var adornment in remove)
+        _adornmentCache.RemoveAll(adornment =>
         {
-            RemoveFromCache(adornment);
-        }
-    }
+            bool isHeaderAfterChange = adornment.HeaderStartPosition > oldEnd;
+            if (!(isHeaderAfterChange || adornment.EndPosition < oldPosition))
+            {
+                if (adornment.Adornment is CBETagControl tag)
+                {
+                    tag.TagClicked -= Adornment_TagClicked;
+                }
+                return true;
+            }
 
-    private void RemoveFromCache(CBAdornmentData adornment)
-    {
-        if (adornment.Adornment is CBETagControl tag)
-        {
-            tag.TagClicked -= Adornment_TagClicked;
-        }
-        _adornmentCache.Remove(adornment);
+            if (isHeaderAfterChange)
+            {
+                adornment.Move(delta);
+            }
+            return false;
+        });
     }
 
     #endregion
@@ -160,8 +156,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
         foreach (var span in spans)
         {
-            var tags = GetTags(span);
-            foreach (var tag in tags)
+            foreach (var tag in GetTags(span))
             {
                 yield return tag;
             }
@@ -188,10 +183,10 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         }
 
         // if big span, return only tags for visible area
-        if (span.Length > 1000 && _VisibleSpan != null && _VisibleSpan.HasValue)
+        if (span.Length > 1000 && _VisibleSpan.HasValue)
         {
             var overlap = span.Overlap(_VisibleSpan.Value);
-            if (overlap != null && overlap.HasValue)
+            if (overlap.HasValue)
             {
                 span = overlap.Value;
                 if (span.Length == 0)
@@ -263,7 +258,11 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                                         CBAdornmentData? adornment = (tag.Tag.Adornment as CBETagControl)?.AdornmentData;
                                         if (adornment.HasValue)
                                         {
-                                            RemoveFromCache(adornment.Value);
+                                            if (adornment.Value.Adornment is CBETagControl tagCtrl)
+                                            {
+                                                tagCtrl.TagClicked -= Adornment_TagClicked;
+                                            }
+                                            _adornmentCache.Remove(adornment.Value);
                                         }
                                     }
                                     list.Clear();
@@ -420,13 +419,11 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         var currentSpan = cbSpan;
 
         // set end of header to first start of code block {
-        for (int i = cbSpan.Start; i < cbSpan.End; i++)
+        string cbText = snapshot.GetText(cbSpan);
+        int indexOfFirstBracet = cbText.IndexOf('{');
+        if (indexOfFirstBracet > 0)
         {
-            if (snapshot[i] == '{')
-            {
-                maxEndPosition = i;
-                break;
-            }
+            maxEndPosition = cbSpan.Start + indexOfFirstBracet;
         }
 
         Span headerSpan, headerSpan2;
@@ -443,7 +440,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
             // get text of current span
             headerStart = currentSpan.Start;
-            headerSpan = new Span(headerStart, Math.Min(maxEndPosition, currentSpan.Span.End) - headerStart);
+            headerSpan = Span.FromBounds(headerStart, Math.Min(maxEndPosition, currentSpan.Span.End));
             if (headerSpan.Length == 0)
             {
                 continue;
@@ -459,7 +456,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 if (headerText.StartsWith("if") && ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != default))
                 {
                     // check what comes before the "if"
-                    headerSpan2 = new Span(currentSpan.Start, Math.Min(maxEndPosition, currentSpan.Span.End) - currentSpan.Start);
+                    headerSpan2 = Span.FromBounds(currentSpan.Start, Math.Min(maxEndPosition, currentSpan.Span.End));
                     headerText2 = snapshot.GetText(headerSpan2);
                     if (headerText2.StartsWith("else"))
                     {
@@ -545,9 +542,10 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     /// </summary>
     private void OnPackageOptionChanged(object sender)
     {
-        int start = Math.Max(0, (_VisibleSpan?.Start) ?? 0);
-        int end = Math.Max(1, _VisibleSpan.HasValue ? _VisibleSpan.Value.End : 1);
-        InvalidateSpan(new Span(start, end - start));
+        InvalidateSpan(
+            Span.FromBounds(
+                Math.Max(0, _VisibleSpan?.Start ?? 0),
+                Math.Max(1, _VisibleSpan?.End ?? 1)));
     }
 
     /// <summary>
@@ -558,16 +556,26 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         // Remove tags from cache
         if (clearCache)
         {
-            _adornmentCache
-                .Where(a => a.HeaderStartPosition >= invalidateSpan.Start || a.EndPosition >= invalidateSpan.Start)
-                .ToList().ForEach(a => RemoveFromCache(a));
+            _adornmentCache.RemoveAll(a =>
+            {
+                if (a.HeaderStartPosition < invalidateSpan.Start && a.EndPosition < invalidateSpan.Start)
+                {
+                    return false;
+                }
+
+                if (a.Adornment is CBETagControl tag)
+                {
+                    tag.TagClicked -= Adornment_TagClicked;
+                }
+                return true;
+            });
         }
 
         // Invalidate span
-        if (invalidateSpan.End <= _TextView.TextBuffer.CurrentSnapshot.Length)
+        var snapshop = _TextView.TextBuffer.CurrentSnapshot;
+        if (invalidateSpan.End <= snapshop.Length)
         {
-            _changedEvent?.Invoke(this, new SnapshotSpanEventArgs(
-                new SnapshotSpan(_TextView.TextBuffer.CurrentSnapshot, invalidateSpan)));
+            _changedEvent?.Invoke(this, new(new(snapshop, invalidateSpan)));
         }
     }
 
@@ -606,10 +614,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
             return;
         }
 
-        if (CBETagPackage.Instance != null)
-        {
-            CBETagPackage.Instance.PackageOptionChanged -= OnPackageOptionChanged;
-        }
+        CBETagPackage.Instance?.PackageOptionChanged -= OnPackageOptionChanged;
 
         _TextView?.LayoutChanged -= OnTextViewLayoutChanged;
         _TextView?.TextBuffer?.Changed -= TextBuffer_Changed;
@@ -637,39 +642,46 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     /// <returns>true if the tag is visible (or if all tags are shown)</returns>
     private bool IsTagVisible(int start, int end, Span? visibleSpan, ITextSnapshot snapshot)
     {
-        bool isVisible = false;
         // Check general condition
-        if (CBETagPackage.CBEVisibilityMode == (int)VisibilityModes.Always
-            || visibleSpan == null || !visibleSpan.HasValue)
+        if (CBETagPackage.CBEVisibilityMode == (int)VisibilityModes.Always || !visibleSpan.HasValue)
         {
-            isVisible = true;
+            return true;
         }
-        // Check visible span
-        if (!isVisible)
+
+        // Check non-visible span
+        var val = visibleSpan.Value;
+        if (!(start < val.Start && end >= val.Start && end <= val.End))
         {
-            var val = visibleSpan.Value;
-            isVisible = start < val.Start && end >= val.Start && end <= val.End;
+            return false;
         }
+
         // Check if caret is in this line
-        if (isVisible && _TextView != null)
+        if (_TextView == null)
         {
-            var caretIndex = _TextView.Caret.Position.BufferPosition.Position;
-            var lineStart = Math.Min(caretIndex, end);
-            var lineEnd = Math.Max(caretIndex, end);
-            if (lineStart == lineEnd)
+            return true;
+        }
+
+        var caretIndex = _TextView.Caret.Position.BufferPosition.Position;
+        var lineStart = Math.Min(caretIndex, end);
+        var lineEnd = Math.Max(caretIndex, end);
+
+        // Same line -> not visible
+        if (lineStart == lineEnd)
+        {
+            return false;
+        }
+
+        // hide tag if caret is in same line
+        if (lineStart >= 0 && lineEnd <= snapshot.Length)
+        {
+            string line = snapshot.GetText(lineStart, lineEnd - lineStart);
+            if (!line.Contains('\n'))
             {
-                isVisible = false;
-            }
-            else if (lineStart >= 0 && lineEnd <= snapshot.Length)
-            {
-                string line = snapshot.GetText(lineStart, lineEnd - lineStart);
-                if (!line.Contains('\n'))
-                {
-                    isVisible = false;
-                }
+                return false;
             }
         }
-        return isVisible;
+
+        return true;
     }
 
     /// <summary>
@@ -677,17 +689,17 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     /// </summary>
     private Span? GetVisibleSpan(ITextView textView)
     {
-        if ((textView?.TextViewLines) == null || textView.TextViewLines.Count <= 2)
+        ITextViewLineCollection lines = textView?.TextViewLines;
+        int lineCount = lines?.Count ?? 0;
+
+        if (lines == null || lineCount <= 2)
         {
             return null;
         }
 
         // Index 0 not yet visible
-        var firstVisibleLine = textView.TextViewLines[1];
         // Last index not visible, too
-        var lastVisibleLine = textView.TextViewLines[textView.TextViewLines.Count - 2];
-
-        return new Span(firstVisibleLine.Start, lastVisibleLine.End - firstVisibleLine.Start);
+        return Span.FromBounds(lines[1].Start, lines[lineCount - 2].End);
     }
 
     #endregion
@@ -698,7 +710,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     {
         // get new visible span
         var visibleSpan = GetVisibleSpan(_TextView);
-        if (visibleSpan == null || !visibleSpan.HasValue)
+        if (!visibleSpan.HasValue)
         {
             return;
         }
@@ -712,7 +724,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         }
 
         // invalidate new and/or old visible span
-        List<Span> invalidSpans = [];
+        List<Span> invalidSpans = new(2);
         var newSpan = visibleSpan.Value;
         if (!_VisibleSpan.HasValue)
         {
@@ -736,13 +748,16 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
         _VisibleSpan = visibleSpan;
 
+        // Skip if all tags are shown always
+        if (CBETagPackage.CBEVisibilityMode == (int)VisibilityModes.Always)
+        {
+            return;
+        }
+
         // refresh tags
         foreach (var span in invalidSpans)
         {
-            if (CBETagPackage.CBEVisibilityMode != (int)VisibilityModes.Always)
-            {
-                InvalidateSpan(span, false);
-            }
+            InvalidateSpan(span, false);
         }
     }
 
