@@ -1,37 +1,40 @@
-﻿<UserControl x:Class="CodeBlockEndTag.CBETagControl"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
-             xmlns:local="clr-namespace:CodeBlockEndTag"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:v="clr-namespace:CodeBlockEndTag.Shell"
-             d:DesignHeight="20"
-             d:DesignWidth="100"
-             Focusable="False"
-             KeyboardNavigation.IsTabStop="False"
-             mc:Ignorable="d">
+﻿<UserControl
+    x:Class="CodeBlockEndTag.CBETagControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:conv="clr-namespace:CodeBlockEndTag.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:imaging="clr-namespace:Microsoft.VisualStudio.Imaging;assembly=Microsoft.VisualStudio.Imaging"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:v="clr-namespace:CodeBlockEndTag.Shell"
+    d:DesignHeight="20"
+    d:DesignWidth="100"
+    Focusable="False"
+    KeyboardNavigation.IsTabStop="False"
+    mc:Ignorable="d">
     <UserControl.Resources>
-        <local:AdditionValueConverter x:Key="addConv" />
-        <local:TextColorConverter x:Key="convColor" />
+        <conv:AdditionValueConverter x:Key="addConv" />
+        <conv:TextColorConverter x:Key="convColor" />
     </UserControl.Resources>
 
-    <Button x:Name="btnTag"
-            Click="Button_Click"
-            Cursor="Arrow"
-            Focusable="False"
-            KeyboardNavigation.IsTabStop="False"
-            MouseDoubleClick="Button_DoubleClick">
+    <Button
+        x:Name="btnTag"
+        Click="Button_Click"
+        Cursor="Arrow"
+        Focusable="False"
+        KeyboardNavigation.IsTabStop="False"
+        MouseDoubleClick="Button_DoubleClick">
 
         <Button.Template>
             <ControlTemplate>
                 <Canvas Height="{Binding LineHeight}">
-                    <imaging:CrispImage x:Name="imgTag"
-                                        Canvas.Left="4"
-                                        Canvas.Top="0"
-                                        Width="{Binding LineHeight}"
-                                        Height="{Binding LineHeight}"
-                                        Moniker="{Binding IconMoniker}">
+                    <imaging:CrispImage
+                        x:Name="imgTag"
+                        Canvas.Left="4"
+                        Canvas.Top="0"
+                        Width="{Binding LineHeight}"
+                        Height="{Binding LineHeight}"
+                        Moniker="{Binding IconMoniker}">
                         <imaging:CrispImage.Style>
                             <Style TargetType="imaging:CrispImage">
                                 <Setter Property="Visibility" Value="Visible" />
@@ -44,19 +47,20 @@
                         </imaging:CrispImage.Style>
                     </imaging:CrispImage>
 
-                    <TextBlock x:Name="txtTag"
-                               Canvas.Left="{Binding LineHeight, Converter={StaticResource addConv}, ConverterParameter=8}"
-                               Canvas.Top="0"
-                               Background="Transparent"
-                               Focusable="False"
-                               FontFamily="{DynamicResource {x:Static v:EndTagColors.FontFamilyKey}}"
-                               FontSize="{Binding LineHeight}"
-                               FontStyle="Normal"
-                               FontWeight="Normal"
-                               Initialized="TxtTag_OnInitialized"
-                               Foreground="{Binding TextColor, Converter={StaticResource convColor}}"
-                               KeyboardNavigation.IsTabStop="False"
-                               Text="{Binding Text}">
+                    <TextBlock
+                        x:Name="txtTag"
+                        Canvas.Left="{Binding LineHeight, Converter={StaticResource addConv}, ConverterParameter=8}"
+                        Canvas.Top="0"
+                        Background="Transparent"
+                        Focusable="False"
+                        FontFamily="{DynamicResource {x:Static v:EndTagColors.FontFamilyKey}}"
+                        FontSize="{Binding LineHeight}"
+                        FontStyle="Normal"
+                        FontWeight="Normal"
+                        Foreground="{Binding TextColor, Converter={StaticResource convColor}}"
+                        Initialized="TxtTag_OnInitialized"
+                        KeyboardNavigation.IsTabStop="False"
+                        Text="{Binding Text}">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Visibility" Value="Visible" />

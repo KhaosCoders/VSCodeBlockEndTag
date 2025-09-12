@@ -2,7 +2,7 @@
 
 namespace Microsoft.Internal.VisualStudio.Shell.Interop;
 
-[Guid("57F6B7D2-1436-11D1-883C-0000F87579D2")]
-internal class FontAndColorsOptionPageDummy
+[Guid("5B100711-3B75-4F3A-B548-6E18C23E12FC")]
+internal interface IFontAndColorDefaultsProvider
 {
 }
