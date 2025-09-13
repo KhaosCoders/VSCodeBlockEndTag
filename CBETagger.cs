@@ -3,15 +3,19 @@
 using CodeBlockEndTag.Extensions;
 using CodeBlockEndTag.Model;
 using CodeBlockEndTag.Shell;
+using CommunityToolkit.HighPerformance;
+using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Tagging;
+using Microsoft.VisualStudio.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text;
 
 namespace CodeBlockEndTag;
 
@@ -44,7 +48,12 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     /// <summary>
     /// This is a list of already created adornment tags used as cache
     /// </summary>
-    private readonly List<CBAdornmentData> _adornmentCache = new(50);
+    private readonly Dictionary<AdornmentDataKey, CBAdornmentData> _adornmentCache = new(50);
+    private struct AdornmentDataKey(int start, int end)
+    {
+        public int StartPosition = start;
+        public int EndPosition = end;
+    }
 
     /// <summary>
     /// This is the visible span of the textview
@@ -117,8 +126,9 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         int oldPosition = textChange.OldPosition;
         int delta = textChange.Delta;
 
-        _adornmentCache.RemoveAll(adornment =>
+        foreach (var entry in _adornmentCache.ToList())
         {
+            var adornment = entry.Value;
             bool isHeaderAfterChange = adornment.HeaderStartPosition > oldEnd;
             if (!(isHeaderAfterChange || adornment.EndPosition < oldPosition))
             {
@@ -126,15 +136,14 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 {
                     tag.TagClicked -= Adornment_TagClicked;
                 }
-                return true;
+                _adornmentCache.Remove(entry.Key);
             }
 
             if (isHeaderAfterChange)
             {
                 adornment.Move(delta);
             }
-            return false;
-        });
+        }
     }
 
     #endregion
@@ -204,23 +213,9 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 #endif
     private ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>> GetTagsCore(SnapshotSpan span)
     {
-        var list = new List<ITagSpan<IntraTextAdornmentTag>>();
+        List<ITagSpan<IntraTextAdornmentTag>> list = new(32);
         var offset = span.Start.Position;
         var snapshot = span.Snapshot;
-
-        // vars used in loop
-        SnapshotSpan cbSpan;
-        CBAdornmentData cbAdornmentData;
-        CBETagControl tagElement;
-        int cbStartPosition;
-        int cbEndPosition;
-        int cbHeaderPosition;
-        string cbHeader;
-        IntraTextAdornmentTag cbTag;
-        SnapshotSpan cbSnapshotSpan;
-        TagSpan<IntraTextAdornmentTag> cbTagSpan;
-        bool isSingleLineComment = false;
-        bool isMultiLineComment = false;
 
 #if DEBUG
         // Stop time
@@ -230,111 +225,80 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
         try
         {
-            // Find all closing bracets
-            for (int i = 0; i < span.Length; i++)
+            var codeSpan = span.GetText().AsSpan();
+            int specialCharIndex = 0;
+            int lastSpecialCharIndex = -1;
+            bool isSingleLineComment = false;
+            bool isMultiLineComment = false;
+            while ((specialCharIndex = codeSpan.Slice(lastSpecialCharIndex + 1).IndexOfAny(['}', '/', '*', '\r', '\n'])) >= 0)
             {
-                var position = i + offset;
-                var chr = snapshot[position];
+                lastSpecialCharIndex += 1 + specialCharIndex;
+                char prevChar = lastSpecialCharIndex > 0 ? codeSpan[lastSpecialCharIndex - 1] : '\0';
 
                 // Skip comments
-                switch (chr)
+                switch (codeSpan[lastSpecialCharIndex])
                 {
-                    case '/':
-                        if (position > 0)
+                    case '/' when prevChar == '/':
+                        isSingleLineComment = true;
+                        continue;
+                    case '/' when prevChar == '*':
+                        if (!isMultiLineComment && list.Count > 0)
                         {
-                            if (snapshot[position - 1] == '/')
+                            // Multiline comment was not started in this span
+                            // Every tag until now was inside a comment
+                            list.RemoveAll(tag =>
                             {
-                                isSingleLineComment = true;
-                            }
-
-                            if (snapshot[position - 1] == '*')
-                            {
-                                if (!isMultiLineComment)
+                                if (tag.Tag.Adornment is CBETagControl { AdornmentData: CBAdornmentData adornment } tagCtrl)
                                 {
-                                    // Multiline comment was not started in this span
-                                    // Every tag until now was inside a comment
-                                    foreach (var tag in list)
-                                    {
-                                        CBAdornmentData? adornment = (tag.Tag.Adornment as CBETagControl)?.AdornmentData;
-                                        if (adornment.HasValue)
-                                        {
-                                            if (adornment.Value.Adornment is CBETagControl tagCtrl)
-                                            {
-                                                tagCtrl.TagClicked -= Adornment_TagClicked;
-                                            }
-                                            _adornmentCache.Remove(adornment.Value);
-                                        }
-                                    }
-                                    list.Clear();
+                                    tagCtrl.TagClicked -= Adornment_TagClicked;
+                                    AdornmentDataKey key = new(adornment.StartPosition, adornment.EndPosition);
+                                    _adornmentCache.Remove(key);
                                 }
-                                isMultiLineComment = false;
-                            }
+                                return true;
+                            });
                         }
-                        break;
-                    case '*':
-                        if (position > 0 && snapshot[position - 1] == '/')
-                        {
-                            isMultiLineComment = true;
-                        }
-
-                        break;
-                    case (char)10:
-                    case (char)13:
+                        isMultiLineComment = false;
+                        continue;
+                    case '*' when prevChar == '/':
+                        isMultiLineComment = true;
+                        continue;
+                    case '/' or '*': continue;
+                    case '\r' or '\n':
                         isSingleLineComment = false;
-                        break;
+                        continue;
+                    case '}' when isSingleLineComment || isMultiLineComment:
+                        // } inside comment
+                        continue;
+                    case '}' when prevChar == '{':
+                        // empty code block {}
+                        continue;
                 }
 
-                if (chr != '}' || isSingleLineComment || isMultiLineComment)
-                {
-                    continue;
-                }
+                // only legit } end up here
+                int cbEndPosition = lastSpecialCharIndex;
 
-                // getting start and end position of code block
-                cbEndPosition = position;
-                if (position >= 0 && snapshot[position - 1] == '{')
-                {
-                    // empty code block {}
-                    cbStartPosition = position - 1;
-                    cbSpan = new SnapshotSpan(snapshot, cbStartPosition, cbEndPosition - cbStartPosition);
-                }
-                else
-                {
-                    // create inner span to navigate to get code block start
-                    cbSpan = _TextStructureNavigator.GetSpanOfEnclosing(new SnapshotSpan(snapshot, position - 1, 1));
-                    cbStartPosition = cbSpan.Start;
-                }
+                // create inner span to navigate to get code block start
+                var cbSpan = _TextStructureNavigator.GetSpanOfEnclosing(new SnapshotSpan(snapshot, offset + lastSpecialCharIndex - 1, 1));
+                int cbStartPosition = cbSpan.Start;
+
+                var cbCodeSpan = cbSpan.GetText().AsSpan();
 
                 // Don't display tag for code blocks on same line
-                if (!snapshot.GetText(cbSpan).Contains('\n'))
+                if (cbCodeSpan.IndexOf('\n') < 0)
                 {
                     continue;
                 }
 
                 // getting the code blocks header
-                cbHeaderPosition = -1;
-                if (snapshot[cbStartPosition] == '{')
-                {
-                    // cbSpan does not contain the header
-                    cbHeader = GetCodeBlockHeader(cbSpan, out cbHeaderPosition);
-                }
-                else
-                {
-                    // cbSpan does contain the header
-                    cbHeader = GetCodeBlockHeader(cbSpan, out cbHeaderPosition, position);
-                }
+                // eigher from cbSpan or the span before that
+                int maxEndPosition = (cbCodeSpan[0] == '{') ? cbSpan.Start : offset + lastSpecialCharIndex;
 
-                // Trim header
-                if (!string.IsNullOrEmpty(cbHeader))
+                int indexOfFirstBracet = cbCodeSpan.IndexOf('{');
+                if (indexOfFirstBracet > 0)
                 {
-                    cbHeader = cbHeader.Trim()
-                        .Replace(Environment.NewLine, "")
-                        .Replace('\t', ' ');
-                    // Strip unnecessary spaces
-                    while (cbHeader.Contains("  "))
-                    {
-                        cbHeader = cbHeader.Replace("  ", " ");
-                    }
+                    maxEndPosition = cbSpan.Start + indexOfFirstBracet;
                 }
+                var cbHeader = GetCodeBlockHeader(snapshot, cbSpan, out int cbHeaderPosition, maxEndPosition);
 
                 // Skip tag if option "only when header not visible"
                 if (_VisibleSpan != null && !IsTagVisible(cbHeaderPosition, cbEndPosition, _VisibleSpan, snapshot))
@@ -342,29 +306,61 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                     continue;
                 }
 
-                var iconMoniker = Microsoft.VisualStudio.Imaging.KnownMonikers.QuestionMark;
-                if (CBETagPackage.CBEDisplayMode != (int)DisplayModes.Text &&
-                    !string.IsNullOrWhiteSpace(cbHeader) && !cbHeader.Contains("{"))
+                // Header as single line without too much spaces or tabs
+                if (!cbHeader.IsEmpty)
                 {
-                    iconMoniker = IconMonikerSelector.SelectMoniker(cbHeader);
+                    PooledStringBuilder sbPool = PooledStringBuilder.GetInstance();
+                    StringBuilder stringBuilder = sbPool.Builder;
+                    char lastChar = '\0';
+                    int lastNonSpaceIndex = -1;
+                    for (int i = 0; i < cbHeader.Length; i++)
+                    {
+                        char chr = cbHeader[i];
+                        if (char.IsControl(chr) || chr == '\n' || chr == '\r')
+                        {
+                            continue;
+                        }
+                        if (chr == '\t')
+                        {
+                            chr = ' ';
+                        }
+                        if (chr == ' ' && (stringBuilder.Length == 0 || lastChar == ' '))
+                        {
+                            continue;
+                        }
+                        stringBuilder.Append(chr);
+                        lastChar = chr;
+                        if (chr != ' ')
+                        {
+                            lastNonSpaceIndex = stringBuilder.Length;
+                        }
+                    }
+                    cbHeader = sbPool.ToStringAndFree(0, lastNonSpaceIndex);
                 }
 
                 // use cache or create new tag
-                cbAdornmentData = _adornmentCache
-                                    .Find(o =>
-                                        o.StartPosition == cbStartPosition &&
-                                        o.EndPosition == cbEndPosition);
+                AdornmentDataKey adornmentDataKey = new(cbStartPosition, cbEndPosition);
+                _adornmentCache.TryGetValue(adornmentDataKey, out var cbAdornmentData);
 
+                CBETagControl tagElement;
                 if (cbAdornmentData.Adornment is CBETagControl tagControl)
                 {
                     tagElement = tagControl;
                 }
                 else
                 {
+                    // Icon for tag
+                    ImageMoniker iconMoniker =
+                        CBETagPackage.CBEDisplayMode == (int)DisplayModes.Text ||
+                        cbHeader.IsWhiteSpace() ||
+                        cbHeader.IndexOf("{") >= 0
+                            ? Microsoft.VisualStudio.Imaging.KnownMonikers.QuestionMark
+                            : IconMonikerSelector.SelectMoniker(cbHeader);
+
                     // create new adornment
                     tagElement = new CBETagControl()
                     {
-                        Text = cbHeader,
+                        Text = cbHeader.ToString(),
                         IconMoniker = iconMoniker,
                         DisplayMode = CBETagPackage.CBEDisplayMode
                     };
@@ -373,17 +369,18 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
                     cbAdornmentData = new CBAdornmentData(cbStartPosition, cbEndPosition, cbHeaderPosition, tagElement);
                     tagElement.AdornmentData = cbAdornmentData;
-                    _adornmentCache.Add(cbAdornmentData);
+                    _adornmentCache.Add(adornmentDataKey, cbAdornmentData);
                 }
 
                 tagElement.SetResourceReference(CBETagControl.LineHeightProperty, EndTagColors.FontSizeKey);
                 tagElement.SetResourceReference(CBETagControl.TextColorProperty, EndTagColors.GetForegroundResourceKey(_TextView.TextBuffer.ContentType.TypeName));
 
                 // Add new tag to list
-                cbTag = new IntraTextAdornmentTag(tagElement, null);
-                cbSnapshotSpan = new SnapshotSpan(snapshot, position + 1, 0);
-                cbTagSpan = new TagSpan<IntraTextAdornmentTag>(cbSnapshotSpan, cbTag);
+                IntraTextAdornmentTag cbTag = new(tagElement, null);
+                SnapshotSpan cbSnapshotSpan = new(snapshot, offset + lastSpecialCharIndex + 1, 0);
+                TagSpan<IntraTextAdornmentTag> cbTagSpan = new(cbSnapshotSpan, cbTag);
                 list.Add(cbTagSpan);
+
             }
         }
         catch (NullReferenceException)
@@ -408,96 +405,96 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     /// Capture the header of a code block
     /// Returns the text and outputs the start position within the snapshot
     /// </summary>
-    private string GetCodeBlockHeader(SnapshotSpan cbSpan, out int headerStart, int maxEndPosition = 0)
+    private ReadOnlySpan<char> GetCodeBlockHeader(
+        ITextSnapshot snapshot,
+        SnapshotSpan cbSpan,
+        out int headerStart,
+        int maxEndPosition = 0)
     {
-        if (maxEndPosition == 0)
-        {
-            maxEndPosition = cbSpan.Start;
-        }
-
-        var snapshot = cbSpan.Snapshot;
         var currentSpan = cbSpan;
-
-        // set end of header to first start of code block {
-        string cbText = snapshot.GetText(cbSpan);
-        int indexOfFirstBracet = cbText.IndexOf('{');
-        if (indexOfFirstBracet > 0)
-        {
-            maxEndPosition = cbSpan.Start + indexOfFirstBracet;
-        }
-
-        Span headerSpan, headerSpan2;
-        string headerText, headerText2;
         int loops = 0;
         // check all enclosing spans until the header is complete
         do
         {
-            // abort if in endless loop
-            if (loops++ > 10)
-            {
-                break;
-            }
-
             // get text of current span
             headerStart = currentSpan.Start;
-            headerSpan = Span.FromBounds(headerStart, Math.Min(maxEndPosition, currentSpan.Span.End));
+            Span headerSpan = Span.FromBounds(headerStart, Math.Min(maxEndPosition, currentSpan.Span.End));
             if (headerSpan.Length == 0)
             {
                 continue;
             }
 
-            headerText = snapshot.GetText(headerSpan);
+            var textSpan = snapshot.GetText(headerSpan).AsSpan().Trim();
 
-            // found header if it begins with a letter or contains a lambda
-            if (!string.IsNullOrWhiteSpace(headerText))
-            //&& (char.IsLetter(headerText[0]) || headerText[0]=='[' || headerText.Contains("=>")))
+            // found header if it's not empty
+            if (textSpan.IsEmpty)
             {
-                // recognize "else if" too
-                if (headerText.StartsWith("if") && ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != default))
-                {
-                    // check what comes before the "if"
-                    headerSpan2 = Span.FromBounds(currentSpan.Start, Math.Min(maxEndPosition, currentSpan.Span.End));
-                    headerText2 = snapshot.GetText(headerSpan2);
-                    if (headerText2.StartsWith("else"))
-                    {
-                        headerStart = headerSpan2.Start;
-                        headerText = headerText2;
-                    }
-                }
-                else if (headerText.Contains('\r') || headerText.Contains('\n'))
-                {
-                    // skip annotations
-                    headerText = headerText.Replace('\r', '\n').Replace("\n\n", "\n");
-                    string[] headerLines = headerText.Split('\n');
-                    bool annotaions = true;
-                    int openBracets = 0;
-                    headerText = string.Empty;
-                    foreach (var line in headerLines)
-                    {
-                        if (!string.IsNullOrWhiteSpace(line))
-                        {
-                            var trimmedline = line.Trim();
-                            if (annotaions && (trimmedline[0] == '[' || openBracets > 0))
-                            {
-                                openBracets += trimmedline.Count(c => c == '[');
-                                openBracets -= trimmedline.Count(c => c == ']');
-                                continue;
-                            }
-                            annotaions = false;
-                            if (!string.IsNullOrWhiteSpace(headerText))
-                            {
-                                headerText += Environment.NewLine;
-                            }
-
-                            headerText += trimmedline;
-                        }
-                    }
-                }
-                return headerText;
+                continue;
             }
 
+            // recognize "else if" too
+            if (textSpan.StartsWith("if") && ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != default))
+            {
+                // check what comes before the "if"
+                Span outerSpan = Span.FromBounds(currentSpan.Start, Math.Min(maxEndPosition, currentSpan.Span.End));
+                string headerText2 = snapshot.GetText(outerSpan);
+                if (headerText2.StartsWith("else"))
+                {
+                    headerStart = outerSpan.Start;
+                    return headerText2;
+                }
+            }
+            else if (textSpan.IndexOfAny('\r', '\n') >= 0)
+            {
+                // skip annotations
+                int indexOfLineBreak;
+                int openBracets = 0;
+                bool annotaions = true;
+                PooledStringBuilder pooledStringBuilder = PooledStringBuilder.GetInstance();
+                StringBuilder stringBuilder = pooledStringBuilder.Builder;
+                while ((indexOfLineBreak = textSpan.IndexOfAny('\r', '\n')) >= 0 || !textSpan.IsEmpty)
+                {
+                    ReadOnlySpan<char> lineSpan;
+                    if (indexOfLineBreak < 0)
+                    {
+                        lineSpan = textSpan;
+                        textSpan = string.Empty;
+                    }
+                    else
+                    {
+                        lineSpan = textSpan.Slice(0, indexOfLineBreak);
+                        textSpan = textSpan.Slice(indexOfLineBreak + 1).TrimStart();
+                    }
+
+                    if (lineSpan.IsEmpty || lineSpan.IsWhiteSpace())
+                    {
+                        continue;
+                    }
+
+                    if (annotaions && (lineSpan[0] == '[' || openBracets > 0))
+                    {
+                        openBracets += lineSpan.Count('[');
+                        openBracets -= lineSpan.Count(']');
+                        continue;
+                    }
+
+                    annotaions = false;
+
+                    if (stringBuilder.Length > 0 && !char.IsWhiteSpace(stringBuilder[stringBuilder.Length - 1]))
+                    {
+                        stringBuilder.Append(' ');
+                    }
+
+                    stringBuilder.Append(lineSpan.Trim().ToArray());
+                }
+
+                return pooledStringBuilder.ToStringAndFree();
+            }
+
+            return textSpan;
+
             // get next enclosing span of current span
-        } while ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != default);
+        } while (loops++ <= 10 && (currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != default);
 
         // No header found
         headerStart = -1;
@@ -556,19 +553,20 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         // Remove tags from cache
         if (clearCache)
         {
-            _adornmentCache.RemoveAll(a =>
+            foreach (var entry in _adornmentCache.ToList())
             {
-                if (a.HeaderStartPosition < invalidateSpan.Start && a.EndPosition < invalidateSpan.Start)
+                var adornment = entry.Value;
+                if (adornment.HeaderStartPosition < invalidateSpan.Start && adornment.EndPosition < invalidateSpan.Start)
                 {
-                    return false;
+                    continue;
                 }
 
-                if (a.Adornment is CBETagControl tag)
+                if (adornment.Adornment is CBETagControl tag)
                 {
                     tag.TagClicked -= Adornment_TagClicked;
                 }
-                return true;
-            });
+                _adornmentCache.Remove(entry.Key);
+            }
         }
 
         // Invalidate span
