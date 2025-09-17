@@ -7,6 +7,7 @@ using System.Linq;
 using Microsoft.VisualStudio.Imaging;
 using Microsoft.VisualStudio.Imaging.Interop;
 using System.Collections.Generic;
+using System;
 
 namespace CodeBlockEndTag;
 
@@ -53,12 +54,12 @@ internal sealed class IconMonikerSelector
     /// <param name="keyword">The keyword from the code header.</param>
     /// <param name="modifier">The access modifier from the code header.</param>
     /// <returns>The appropriate ImageMoniker for the given keyword and modifier combination.</returns>
-    private delegate ImageMoniker IconSelector(string keyword, string modifier);
+    private delegate ImageMoniker IconSelector(ReadOnlySpan<char> keyword, ReadOnlySpan<char> modifier);
 
     /// <summary>
     /// Dictionary mapping keywords to their corresponding icon selector functions.
     /// </summary>
-    private static readonly Dictionary<string, IconSelector> iconSelectors = [];
+    private static readonly Dictionary<string, IconSelector> iconSelectors = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Selects the appropriate Visual Studio icon moniker based on the provided code header text.
@@ -66,42 +67,26 @@ internal sealed class IconMonikerSelector
     /// </summary>
     /// <param name="header">The code header text to analyze (e.g., "public class MyClass").</param>
     /// <returns>An ImageMoniker representing the appropriate icon for the code construct.</returns>
-    public static ImageMoniker SelectMoniker(string header)
+    public static ImageMoniker SelectMoniker(ReadOnlySpan<char> header)
     {
         ImageMoniker icon = KnownMonikers.QuestionMark;
-        if (string.IsNullOrWhiteSpace(header))
-        {
-            return icon;
-        }
-
-        // split words of header
-        string[] words = header.Split(' ');
-        if (words.Length == 0)
+        if (header.IsEmpty || header.IsWhiteSpace())
         {
             return icon;
         }
 
         // find first visibility modifier
-        string modifier = GetModifier(words, out int modifierCount);
-        int keywordIndex = modifierCount;
-        if (words.Length <= keywordIndex)
+        var modifier = SplitModifierFromSymbol(header, out var symbol, out int wordCount, out int modifierCount);
+        if (symbol.IsEmpty)
         {
             return icon;
         }
 
-        // take first keyword
-        string keyword = words[keywordIndex].ToLower();
-        if (keyword.Contains('('))
+        // remove generics, parameters, etc.
+        int indexOfSpecialChar = symbol.IndexOfAny(['<', '(', '[']);
+        if (indexOfSpecialChar >= 0)
         {
-            keyword = keyword.Substring(0, keyword.IndexOf('('));
-        }
-        if (keyword.Contains('['))
-        {
-            keyword = keyword.Substring(0, keyword.IndexOf('['));
-        }
-        if (keyword.Contains('<'))
-        {
-            keyword = keyword.Substring(0, keyword.IndexOf('<'));
+            symbol = symbol.Slice(0, indexOfSpecialChar);
         }
 
         // setup keyword icons
@@ -111,19 +96,19 @@ internal sealed class IconMonikerSelector
         }
 
         // get icon by keyword
-        if (iconSelectors.ContainsKey(keyword))
+        if (iconSelectors.TryGetValue(symbol.ToString(), out var selector))
         {
-            return iconSelectors[keyword](keyword, modifier);
+            return selector(symbol, modifier);
         }
 
         // icon for lambda
-        else if (header.Contains("=>"))
+        else if (header.IndexOf("=>") >= 0)
         {
             return KnownMonikers.DelegatePublic;
         }
 
         // icon for method/ctor
-        else if (words.Length - modifierCount >= 1 && header.Contains('(') && header.Contains(')'))
+        else if (wordCount - modifierCount >= 1 && header.IndexOf('(') >= 0 && header.IndexOf(')') >= 0)
         {
             return modifier switch
             {
@@ -135,7 +120,7 @@ internal sealed class IconMonikerSelector
         }
 
         // icon for property
-        else if (words.Length - modifierCount == 2)
+        else if (wordCount - modifierCount == 2)
         {
             return modifier switch
             {
@@ -250,27 +235,49 @@ internal sealed class IconMonikerSelector
     /// <summary>
     /// Extracts the first access modifier from the provided words array and counts total modifiers.
     /// </summary>
-    /// <param name="words">Array of words from the code header.</param>
+    /// <param name="header">the code header.</param>
     /// <param name="modifierCount">Output parameter containing the total number of modifiers found.</param>
     /// <returns>The first access modifier found, or an empty string if none are found.</returns>
-    private static string GetModifier(string[] words, out int modifierCount)
+    private static ReadOnlySpan<char> SplitModifierFromSymbol(ReadOnlySpan<char> header, out ReadOnlySpan<char> symbol, out int wordCount, out int modifierCount)
     {
-        string modifier = string.Empty;
+        symbol = [];
+        wordCount = 0;
         modifierCount = 0;
-        foreach (string word in words)
+        var currentText = header;
+        ReadOnlySpan<char> modifier = [];
+        int indexOfSpace;
+        while ((indexOfSpace = currentText.IndexOf(' ')) >= 0 || !currentText.IsEmpty)
         {
-            if (Modifiers.Contains(word))
+            wordCount++;
+
+            ReadOnlySpan<char> word;
+            if (indexOfSpace >= 0)
+            {
+                word = currentText.Slice(0, indexOfSpace);
+                currentText = currentText.Slice(indexOfSpace + 1);
+            }
+            else
+            {
+                word = currentText;
+                currentText = [];
+            }
+
+            if (Modifiers.Contains(word.ToString()))
             {
                 modifierCount++;
-                if (string.IsNullOrWhiteSpace(modifier))
+                if (modifier.IsEmpty)
                 {
                     modifier = word;
                 }
-
                 continue;
             }
-            break;
+
+            if (symbol.IsEmpty)
+            {
+                symbol = word;
+            }
         }
+
         return modifier;
     }
 }
