@@ -6,17 +6,15 @@
     xmlns:local="clr-namespace:CodeBlockEndTag"
     xmlns:v="clr-namespace:CodeBlockEndTag.Shell">
 
-    <conv:AdditionValueConverter x:Key="addConv" />
     <conv:TextColorConverter x:Key="convColor" />
 
     <ControlTemplate x:Key="tplButton">
-        <Canvas Height="{Binding LineHeight}">
+        <StackPanel Height="{Binding LineHeight}" Orientation="Horizontal">
             <imaging:CrispImage
                 x:Name="imgTag"
-                Canvas.Left="4"
-                Canvas.Top="0"
                 Width="{Binding LineHeight}"
                 Height="{Binding LineHeight}"
+                Margin="4,0,0,0"
                 Moniker="{Binding IconMoniker}">
                 <imaging:CrispImage.Style>
                     <Style TargetType="imaging:CrispImage">
@@ -32,8 +30,7 @@
 
             <TextBlock
                 x:Name="txtTag"
-                Canvas.Left="{Binding LineHeight, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource addConv}, ConverterParameter=8}"
-                Canvas.Top="0"
+                Margin="8,0,0,0"
                 Background="Transparent"
                 Focusable="False"
                 FontFamily="{DynamicResource {x:Static v:EndTagColors.FontFamilyKey}}"
@@ -42,7 +39,8 @@
                 FontWeight="Normal"
                 Foreground="{Binding TextColor}"
                 KeyboardNavigation.IsTabStop="False"
-                Text="{Binding Text}">
+                Text="{Binding Text}"
+                TextTrimming="WordEllipsis">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Setter Property="Visibility" Value="Visible" />
@@ -54,7 +52,7 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
-        </Canvas>
+        </StackPanel>
     </ControlTemplate>
 
     <Style TargetType="{x:Type local:CBETagControl}">
