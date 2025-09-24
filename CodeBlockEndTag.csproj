@@ -2,7 +2,7 @@
 <Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <MinimumVisualStudioVersion>15.0</MinimumVisualStudioVersion>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>preview</LangVersion>
     <UseCodebase>true</UseCodebase>
     <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
   </PropertyGroup>
@@ -54,6 +54,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="CBETagControl.cs" />
+    <Compile Include="MaxAdornmentWidthExtension.cs" />
     <Compile Include="Model\ClickMode.cs" />
     <Compile Include="Converters\AdditionValueConverter.cs" />
     <Compile Include="Converters\BoolArrayConverter.cs" />

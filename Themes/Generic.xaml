@@ -6,17 +6,16 @@
     xmlns:local="clr-namespace:CodeBlockEndTag"
     xmlns:v="clr-namespace:CodeBlockEndTag.Shell">
 
-    <conv:AdditionValueConverter x:Key="addConv" />
     <conv:TextColorConverter x:Key="convColor" />
 
     <ControlTemplate x:Key="tplButton">
-        <Canvas Height="{Binding LineHeight}">
+        <DockPanel Height="{Binding LineHeight}" local:MaxAdornmentWidthExtension.Enable="True">
+
             <imaging:CrispImage
-                x:Name="imgTag"
-                Canvas.Left="4"
-                Canvas.Top="0"
                 Width="{Binding LineHeight}"
                 Height="{Binding LineHeight}"
+                Margin="4,0,0,0"
+                DockPanel.Dock="Left"
                 Moniker="{Binding IconMoniker}">
                 <imaging:CrispImage.Style>
                     <Style TargetType="imaging:CrispImage">
@@ -31,9 +30,7 @@
             </imaging:CrispImage>
 
             <TextBlock
-                x:Name="txtTag"
-                Canvas.Left="{Binding LineHeight, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource addConv}, ConverterParameter=8}"
-                Canvas.Top="0"
+                Margin="8,0,0,0"
                 Background="Transparent"
                 Focusable="False"
                 FontFamily="{DynamicResource {x:Static v:EndTagColors.FontFamilyKey}}"
@@ -42,7 +39,8 @@
                 FontWeight="Normal"
                 Foreground="{Binding TextColor}"
                 KeyboardNavigation.IsTabStop="False"
-                Text="{Binding Text}">
+                Text="{Binding Text}"
+                TextTrimming="CharacterEllipsis">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Setter Property="Visibility" Value="Visible" />
@@ -54,7 +52,7 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
-        </Canvas>
+        </DockPanel>
     </ControlTemplate>
 
     <Style TargetType="{x:Type local:CBETagControl}">
