@@ -9,12 +9,13 @@
     <conv:TextColorConverter x:Key="convColor" />
 
     <ControlTemplate x:Key="tplButton">
-        <StackPanel Height="{Binding LineHeight}" Orientation="Horizontal">
+        <DockPanel Height="{Binding LineHeight}" local:MaxAdornmentWidthExtension.Enable="True">
+
             <imaging:CrispImage
-                x:Name="imgTag"
                 Width="{Binding LineHeight}"
                 Height="{Binding LineHeight}"
                 Margin="4,0,0,0"
+                DockPanel.Dock="Left"
                 Moniker="{Binding IconMoniker}">
                 <imaging:CrispImage.Style>
                     <Style TargetType="imaging:CrispImage">
@@ -29,7 +30,6 @@
             </imaging:CrispImage>
 
             <TextBlock
-                x:Name="txtTag"
                 Margin="8,0,0,0"
                 Background="Transparent"
                 Focusable="False"
@@ -40,7 +40,7 @@
                 Foreground="{Binding TextColor}"
                 KeyboardNavigation.IsTabStop="False"
                 Text="{Binding Text}"
-                TextTrimming="WordEllipsis">
+                TextTrimming="CharacterEllipsis">
                 <TextBlock.Style>
                     <Style TargetType="TextBlock">
                         <Setter Property="Visibility" Value="Visible" />
@@ -52,7 +52,7 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
-        </StackPanel>
+        </DockPanel>
     </ControlTemplate>
 
     <Style TargetType="{x:Type local:CBETagControl}">

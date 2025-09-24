@@ -69,26 +69,6 @@ public class CBETagControl : ButtonBase
     private DispatcherTimer buttonSingleClickTimeout;
     private bool buttonModifiersPressed;
 
-    private TextBlock _textblock;
-
-    public override void OnApplyTemplate()
-    {
-        base.OnApplyTemplate();
-        _textblock = Template.FindName("txtTag", this) as TextBlock;
-        _textblock?.Initialized += (sender, _) => InvalidateMeasure();
-    }
-
-    protected override Size MeasureOverride(Size constraint)
-    {
-        var paddingRight = LineHeight / 2;
-        if (DisplayMode == 2)
-        {
-            // Icon only
-            return new Size(LineHeight + 4 + paddingRight, LineHeight);
-        }
-        return new Size((_textblock?.ActualWidth ?? 0) + 4 + paddingRight, LineHeight);
-    }
-
     private void ButtonSingleClick(object sender, EventArgs e)
     {
         buttonSingleClickTimeout?.Stop();
