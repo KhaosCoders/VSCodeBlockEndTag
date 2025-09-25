@@ -362,7 +362,8 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                     {
                         Text = cbHeader.ToString(),
                         IconMoniker = iconMoniker,
-                        DisplayMode = CBETagPackage.CBEDisplayMode
+                        DisplayMode = CBETagPackage.CBEDisplayMode,
+                        Margin = new System.Windows.Thickness(CBETagPackage.CBEMargin, 0, 0, 0)
                     };
 
                     tagElement.TagClicked += Adornment_TagClicked;

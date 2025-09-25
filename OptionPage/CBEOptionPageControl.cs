@@ -37,6 +37,8 @@ public partial class CBEOptionPageControl : UserControl
         rdbIconAndText.Checked = optionsPage.CBEDisplayMode == (int)DisplayModes.IconAndText;
         rdbIconOnly.Checked = optionsPage.CBEDisplayMode == (int)DisplayModes.Icon;
         rdbTextOnly.Checked = optionsPage.CBEDisplayMode == (int)DisplayModes.Text;
+
+        txtMargin.Text = optionsPage.CBEMargin.ToString();
     }
 
     private void LoadSupportedLanguagesToUI()
@@ -140,5 +142,17 @@ public partial class CBEOptionPageControl : UserControl
     private void lblFont_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
     {
         CBETagPackage.Instance.ShowOptionPage(typeof(FontAndColorsOptionPageDummy));
+    }
+
+    private void txtMargin_TextChanged(object sender, EventArgs e)
+    {
+        if (txtMargin.Text.Length > 0 && int.TryParse(txtMargin.Text, out int margin))
+        {
+            optionsPage.CBEMargin = margin;
+        }
+        else
+        {
+            optionsPage.CBEMargin = 0;
+        }
     }
 }
