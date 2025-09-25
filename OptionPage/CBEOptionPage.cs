@@ -165,6 +165,22 @@ public partial class CBEOptionPage : DialogPage
     }
     private int cbeVisibilityMode = (int)VisibilityModes.HeaderNotVisible;
 
+    /// <summary>
+    /// Gets or sets the margin (in pixels) between the closing brace and the tag
+    /// </summary>
+    public int CBEMargin
+    {
+        get => cbeMargin;
+        set {
+            if (cbeMargin != value)
+            {
+                cbeMargin = value;
+                OptionChanged?.Invoke(this);
+            }
+        }
+    }
+    private int cbeMargin = 4;
+
     #endregion
 
     #region save / load
@@ -221,4 +237,5 @@ public partial class CBEOptionPage : DialogPage
             return page;
         }
     }
+
 }

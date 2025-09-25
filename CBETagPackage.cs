@@ -125,6 +125,8 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
 
     public static int CBEClickMode => _optionPage?.CBEClickMode ?? (int)ClickMode.DoubleClick;
 
+    public static int CBEMargin => _optionPage?.CBEMargin ?? 4;
+
     #endregion
 
     #region VS Build Version
