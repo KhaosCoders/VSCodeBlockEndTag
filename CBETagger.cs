@@ -407,7 +407,9 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 tagElement.SetResourceReference(CBETagControl.TextColorProperty, EndTagColors.GetForegroundResourceKey(_TextView.TextBuffer.ContentType.TypeName));
 
                 // Add new tag to list
-                IntraTextAdornmentTag cbTag = new(tagElement, null);
+                // Use PositionAffinity.Predecessor to ensure clicks on the left side of the tag
+                // place the caret after the }, not before it
+                IntraTextAdornmentTag cbTag = new(tagElement, null, PositionAffinity.Predecessor);
                 SnapshotSpan cbSnapshotSpan = new(snapshot, cbEndPosition + 1, 0);
                 TagSpan<IntraTextAdornmentTag> cbTagSpan = new(cbSnapshotSpan, cbTag);
                 list.Add(cbTagSpan);
