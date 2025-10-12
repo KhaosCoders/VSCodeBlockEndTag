@@ -103,12 +103,30 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
     private void Caret_PositionChanged(object sender, CaretPositionChangedEventArgs e)
     {
-        var start = Math.Min(e.OldPosition.BufferPosition.Position, e.NewPosition.BufferPosition.Position);
-        var end = Math.Max(e.OldPosition.BufferPosition.Position, e.NewPosition.BufferPosition.Position);
-        if (start != end)
+        // Only invalidate if visibility mode requires it
+        if (CBETagPackage.CBEVisibilityMode == (int)VisibilityModes.Always)
         {
-            InvalidateSpan(Span.FromBounds(start, end), false);
+            return;
         }
+
+        var oldPos = e.OldPosition.BufferPosition.Position;
+        var newPos = e.NewPosition.BufferPosition.Position;
+        
+        // Calculate the range that needs to be invalidated
+        // Include the lines containing both old and new positions
+        var start = Math.Min(oldPos, newPos);
+        var end = Math.Max(oldPos, newPos);
+        
+        // Expand to include at least the current line to ensure proper tag visibility updates
+        if (start == end)
+        {
+            // For single position (no movement range), invalidate a small area around the caret
+            // This handles arrow key movements
+            start = Math.Max(0, start - 1);
+            end = Math.Min(_TextView.TextBuffer.CurrentSnapshot.Length, end + 1);
+        }
+        
+        InvalidateSpan(Span.FromBounds(start, end), false);
     }
 
     private void TextBuffer_Changed(object sender, TextContentChangedEventArgs e)
@@ -275,10 +293,10 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 }
 
                 // only legit } end up here
-                int cbEndPosition = lastSpecialCharIndex;
+                int cbEndPosition = offset + lastSpecialCharIndex;
 
                 // create inner span to navigate to get code block start
-                var cbSpan = _TextStructureNavigator.GetSpanOfEnclosing(new SnapshotSpan(snapshot, offset + lastSpecialCharIndex - 1, 1));
+                var cbSpan = _TextStructureNavigator.GetSpanOfEnclosing(new SnapshotSpan(snapshot, cbEndPosition - 1, 1));
                 int cbStartPosition = cbSpan.Start;
 
                 var cbCodeSpan = cbSpan.GetText().AsSpan();
@@ -291,7 +309,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
                 // getting the code blocks header
                 // eigher from cbSpan or the span before that
-                int maxEndPosition = (cbCodeSpan[0] == '{') ? cbSpan.Start : offset + lastSpecialCharIndex;
+                int maxEndPosition = (cbCodeSpan[0] == '{') ? cbSpan.Start : cbEndPosition;
 
                 int indexOfFirstBracet = cbCodeSpan.IndexOf('{');
                 if (indexOfFirstBracet > 0)
@@ -378,7 +396,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
                 // Add new tag to list
                 IntraTextAdornmentTag cbTag = new(tagElement, null);
-                SnapshotSpan cbSnapshotSpan = new(snapshot, offset + lastSpecialCharIndex + 1, 0);
+                SnapshotSpan cbSnapshotSpan = new(snapshot, cbEndPosition + 1, 0);
                 TagSpan<IntraTextAdornmentTag> cbTagSpan = new(cbSnapshotSpan, cbTag);
                 list.Add(cbTagSpan);
 
