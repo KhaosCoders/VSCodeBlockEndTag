@@ -103,28 +103,29 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
     private void Caret_PositionChanged(object sender, CaretPositionChangedEventArgs e)
     {
-        // Only invalidate if visibility mode requires it
-        if (CBETagPackage.CBEVisibilityMode == (int)VisibilityModes.Always)
-        {
-            return;
-        }
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"Caret_PositionChanged called: VisibilityMode={CBETagPackage.CBEVisibilityMode}");
+#endif
 
         var oldPos = e.OldPosition.BufferPosition.Position;
         var newPos = e.NewPosition.BufferPosition.Position;
+
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"  oldPos={oldPos}, newPos={newPos}");
+#endif
         
-        // Calculate the range that needs to be invalidated
-        // Include the lines containing both old and new positions
-        var start = Math.Min(oldPos, newPos);
-        var end = Math.Max(oldPos, newPos);
+        // Get the lines containing the old and new caret positions
+        var snapshot = _TextView.TextBuffer.CurrentSnapshot;
+        var oldLine = snapshot.GetLineFromPosition(oldPos);
+        var newLine = snapshot.GetLineFromPosition(newPos);
         
-        // Expand to include at least the current line to ensure proper tag visibility updates
-        if (start == end)
-        {
-            // For single position (no movement range), invalidate a small area around the caret
-            // This handles arrow key movements
-            start = Math.Max(0, start - 1);
-            end = Math.Min(_TextView.TextBuffer.CurrentSnapshot.Length, end + 1);
-        }
+        // Invalidate from the start of the first line to the end of the last line
+        var start = Math.Min(oldLine.Start.Position, newLine.Start.Position);
+        var end = Math.Max(oldLine.End.Position, newLine.End.Position);
+
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"  -> Invalidating span: start={start}, end={end} (full lines)");
+#endif
         
         InvalidateSpan(Span.FromBounds(start, end), false);
     }
@@ -295,6 +296,10 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 // only legit } end up here
                 int cbEndPosition = offset + lastSpecialCharIndex;
 
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"Found closing bracket at position: {cbEndPosition} (offset={offset}, lastSpecialCharIndex={lastSpecialCharIndex})");
+#endif
+
                 // create inner span to navigate to get code block start
                 var cbSpan = _TextStructureNavigator.GetSpanOfEnclosing(new SnapshotSpan(snapshot, cbEndPosition - 1, 1));
                 int cbStartPosition = cbSpan.Start;
@@ -318,9 +323,16 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 }
                 var cbHeader = GetCodeBlockHeader(snapshot, cbSpan, out int cbHeaderPosition, maxEndPosition);
 
-                // Skip tag if option "only when header not visible"
-                if (_VisibleSpan != null && !IsTagVisible(cbHeaderPosition, cbEndPosition, _VisibleSpan, snapshot))
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"  _VisibleSpan is {(_VisibleSpan.HasValue ? "set" : "null")}, VisibilityMode={CBETagPackage.CBEVisibilityMode}");
+#endif
+
+                // Always check tag visibility (includes caret position check)
+                if (!IsTagVisible(cbHeaderPosition, cbEndPosition, _VisibleSpan, snapshot))
                 {
+#if DEBUG
+                    System.Diagnostics.Debug.WriteLine($"  -> Skipping tag for code block at {cbEndPosition}");
+#endif
                     continue;
                 }
 
@@ -399,6 +411,10 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 SnapshotSpan cbSnapshotSpan = new(snapshot, cbEndPosition + 1, 0);
                 TagSpan<IntraTextAdornmentTag> cbTagSpan = new(cbSnapshotSpan, cbTag);
                 list.Add(cbTagSpan);
+
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"  -> Adding tag at position {cbEndPosition + 1} for block {cbStartPosition}-{cbEndPosition}");
+#endif
 
             }
         }
@@ -659,9 +675,31 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     /// <returns>true if the tag is visible (or if all tags are shown)</returns>
     private bool IsTagVisible(int start, int end, Span? visibleSpan, ITextSnapshot snapshot)
     {
-        // Check general condition
+        // Always check if caret is at the closing bracket position first
+        if (_TextView != null)
+        {
+            var caretIndex = _TextView.Caret.Position.BufferPosition.Position;
+
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"IsTagVisible: caretIndex={caretIndex}, end={end}, end+1={end + 1}, start={start}");
+#endif
+            
+            // Hide tag if caret is at the closing bracket or right after it (where the tag is placed)
+            if (caretIndex == end || caretIndex == end + 1)
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"  -> Hiding tag: caret at closing bracket position");
+#endif
+                return false;
+            }
+        }
+
+        // Check general condition for visibility mode
         if (CBETagPackage.CBEVisibilityMode == (int)VisibilityModes.Always || !visibleSpan.HasValue)
         {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"  -> Showing tag: Always mode or no visible span");
+#endif
             return true;
         }
 
@@ -669,6 +707,9 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         var val = visibleSpan.Value;
         if (!(start < val.Start && end >= val.Start && end <= val.End))
         {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"  -> Hiding tag: not in visible span");
+#endif
             return false;
         }
 
@@ -678,13 +719,16 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
             return true;
         }
 
-        var caretIndex = _TextView.Caret.Position.BufferPosition.Position;
-        var lineStart = Math.Min(caretIndex, end);
-        var lineEnd = Math.Max(caretIndex, end);
+        var caretIdx = _TextView.Caret.Position.BufferPosition.Position;
+        var lineStart = Math.Min(caretIdx, end);
+        var lineEnd = Math.Max(caretIdx, end);
 
         // Same line -> not visible
         if (lineStart == lineEnd)
         {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"  -> Hiding tag: same line (lineStart == lineEnd)");
+#endif
             return false;
         }
 
@@ -694,10 +738,16 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
             string line = snapshot.GetText(lineStart, lineEnd - lineStart);
             if (!line.Contains('\n'))
             {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"  -> Hiding tag: caret on same line (no newline between caret and end)");
+#endif
                 return false;
             }
         }
 
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"  -> Showing tag");
+#endif
         return true;
     }
 
