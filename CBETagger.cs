@@ -9,6 +9,7 @@ using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Operations;
+using Microsoft.VisualStudio.Text.Outlining;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
 using System;
@@ -41,6 +42,16 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     private readonly ITextStructureNavigator _TextStructureNavigator;
 
     /// <summary>
+    /// The outlining manager for this text view (provides collapsible regions)
+    /// </summary>
+    private readonly IOutliningManager _OutliningManager;
+
+    /// <summary>
+    /// Whether outlining is supported and enabled for this buffer
+    /// </summary>
+    private readonly bool _OutliningSupported;
+
+    /// <summary>
     /// The TextView this tagger is assigned to
     /// </summary>
     private readonly IWpfTextView _TextView;
@@ -59,6 +70,16 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     /// This is the visible span of the textview
     /// </summary>
     private Span? _VisibleSpan;
+
+    /// <summary>
+    /// Timer for debouncing layout changed events
+    /// </summary>
+    private System.Windows.Threading.DispatcherTimer _LayoutChangedDebounceTimer;
+
+    /// <summary>
+    /// Pending span to invalidate after debounce
+    /// </summary>
+    private Span? _PendingInvalidateSpan;
 
     /// <summary>
     /// Is set, when the instance is disposed
@@ -88,10 +109,27 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         // Getting services provided by VisualStudio
         _TextStructureNavigator = provider.GetTextStructureNavigator(_TextView.TextBuffer);
 
+        // Get outlining manager for collapsible regions
+        _OutliningManager = provider.OutliningManagerService?.GetOutliningManager(_TextView);
+        _OutliningSupported = _OutliningManager != null && _OutliningManager.Enabled;
+
         // Hook up events
         _TextView.TextBuffer.Changed += TextBuffer_Changed;
         _TextView.LayoutChanged += OnTextViewLayoutChanged;
         _TextView.Caret.PositionChanged += Caret_PositionChanged;
+
+        // Hook up outlining events if supported
+        if (_OutliningManager != null)
+        {
+            _OutliningManager.RegionsChanged += OnOutliningRegionsChanged;
+        }
+
+        // Initialize debounce timer for layout changes (150ms delay)
+        _LayoutChangedDebounceTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(150)
+        };
+        _LayoutChangedDebounceTimer.Tick += OnLayoutChangedDebounceTimerTick;
 
         // Listen for package events
         InitializeCBEPackage();
@@ -113,12 +151,12 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 #if DEBUG
         System.Diagnostics.Debug.WriteLine($"  oldPos={oldPos}, newPos={newPos}");
 #endif
-        
+
         // Get the lines containing the old and new caret positions
         var snapshot = _TextView.TextBuffer.CurrentSnapshot;
         var oldLine = snapshot.GetLineFromPosition(oldPos);
         var newLine = snapshot.GetLineFromPosition(newPos);
-        
+
         // Invalidate from the start of the first line to the end of the last line
         var start = Math.Min(oldLine.Start.Position, newLine.Start.Position);
         var end = Math.Max(oldLine.End.Position, newLine.End.Position);
@@ -126,7 +164,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 #if DEBUG
         System.Diagnostics.Debug.WriteLine($"  -> Invalidating span: start={start}, end={end} (full lines)");
 #endif
-        
+
         InvalidateSpan(Span.FromBounds(start, end), false);
     }
 
@@ -165,6 +203,13 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         }
     }
 
+    private void OnOutliningRegionsChanged(object sender, RegionsChangedEventArgs e)
+    {
+        // Invalidate cache for affected regions
+        var affectedSpan = e.AffectedSpan;
+        InvalidateSpan(affectedSpan, clearCache: true);
+    }
+
     #endregion
 
     #region ITagger<IntraTextAdornmentTag>
@@ -182,6 +227,14 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         // Second chance to hook up events
         InitializeCBEPackage();
 
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($">>> GetTags called with {spans.Count} span(s)");
+        foreach (var span in spans)
+        {
+            System.Diagnostics.Debug.WriteLine($"    Span: {span.Start.Position}-{span.End.Position} (length: {span.Length})");
+        }
+#endif
+
         foreach (var span in spans)
         {
             foreach (var tag in GetTags(span))
@@ -189,6 +242,10 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 yield return tag;
             }
         }
+
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"<<< GetTags finished");
+#endif
     }
 
     event EventHandler<SnapshotSpanEventArgs> ITagger<IntraTextAdornmentTag>.TagsChanged
@@ -203,10 +260,29 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
     internal ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>> GetTags(SnapshotSpan span)
     {
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"  GetTags(span): {span.Start.Position}-{span.End.Position}");
+        System.Diagnostics.Debug.WriteLine($"    CBETaggerEnabled: {CBETagPackage.CBETaggerEnabled}");
+        System.Diagnostics.Debug.WriteLine($"    OutliningSupported: {_OutliningSupported}");
+        System.Diagnostics.Debug.WriteLine($"    VisibleSpan: {(_VisibleSpan.HasValue ? $"{_VisibleSpan.Value.Start}-{_VisibleSpan.Value.End}" : "(null)")}");
+#endif
+
         if (!CBETagPackage.CBETaggerEnabled ||
             span.Snapshot != _TextView.TextBuffer.CurrentSnapshot ||
             span.Length == 0)
         {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"    -> Returning empty (disabled or invalid span)");
+#endif
+            return EmptyTagColllection;
+        }
+
+        // Check if outlining is supported
+        if (!_OutliningSupported)
+        {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"    -> Returning empty (outlining not supported)");
+#endif
             return EmptyTagColllection;
         }
 
@@ -217,8 +293,14 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
             if (overlap.HasValue)
             {
                 span = overlap.Value;
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"    -> Big span, using overlap: {span.Start.Position}-{span.End.Position}");
+#endif
                 if (span.Length == 0)
                 {
+#if DEBUG
+                    System.Diagnostics.Debug.WriteLine($"    -> Returning empty (overlap is empty)");
+#endif
                     return EmptyTagColllection;
                 }
             }
@@ -233,110 +315,91 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
     private ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>> GetTagsCore(SnapshotSpan span)
     {
         List<ITagSpan<IntraTextAdornmentTag>> list = new(32);
-        var offset = span.Start.Position;
         var snapshot = span.Snapshot;
 
 #if DEBUG
         // Stop time
         _watch ??= new System.Diagnostics.Stopwatch();
         _watch.Restart();
+        System.Diagnostics.Debug.WriteLine($"    GetTagsCore: Processing span {span.Start.Position}-{span.End.Position}");
 #endif
 
         try
         {
-            var codeSpan = span.GetText().AsSpan();
-            int specialCharIndex = 0;
-            int lastSpecialCharIndex = -1;
-            bool isSingleLineComment = false;
-            bool isMultiLineComment = false;
-            while ((specialCharIndex = codeSpan.Slice(lastSpecialCharIndex + 1).IndexOfAny(['}', '/', '*', '\r', '\n'])) >= 0)
+            // Expand the query span to include regions that might end in our visible area
+            // but start before it. Query from beginning of file to end of requested span.
+            var expandedSpan = new SnapshotSpan(snapshot, 0, span.End.Position);
+
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"      Expanded span for query: 0-{span.End.Position}");
+#endif
+
+            // Get all collapsible regions from the outlining manager
+            var regions = _OutliningManager.GetAllRegions(expandedSpan);
+
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"      Found {regions.Count()} total regions in expanded span");
+#endif
+
+            int processedCount = 0;
+            int skippedBefore = 0;
+            int skippedSingleLine = 0;
+            int skippedInvisible = 0;
+            int addedCount = 0;
+
+            foreach (var region in regions)
             {
-                lastSpecialCharIndex += 1 + specialCharIndex;
-                char prevChar = lastSpecialCharIndex > 0 ? codeSpan[lastSpecialCharIndex - 1] : '\0';
+                processedCount++;
 
-                // Skip comments
-                switch (codeSpan[lastSpecialCharIndex])
+                // Get the extent of this collapsible region
+                var extent = region.Extent.GetSpan(snapshot);
+
+                // Only process regions that end within or after the requested span
+                if (extent.End.Position < span.Start.Position)
                 {
-                    case '/' when prevChar == '/':
-                        isSingleLineComment = true;
-                        continue;
-                    case '/' when prevChar == '*':
-                        if (!isMultiLineComment && list.Count > 0)
-                        {
-                            // Multiline comment was not started in this span
-                            // Every tag until now was inside a comment
-                            list.RemoveAll(tag =>
-                            {
-                                if (tag.Tag.Adornment is CBETagControl { AdornmentData: CBAdornmentData adornment } tagCtrl)
-                                {
-                                    tagCtrl.TagClicked -= Adornment_TagClicked;
-                                    AdornmentDataKey key = new(adornment.StartPosition, adornment.EndPosition);
-                                    _adornmentCache.Remove(key);
-                                }
-                                return true;
-                            });
-                        }
-                        isMultiLineComment = false;
-                        continue;
-                    case '*' when prevChar == '/':
-                        isMultiLineComment = true;
-                        continue;
-                    case '/' or '*': continue;
-                    case '\r' or '\n':
-                        isSingleLineComment = false;
-                        continue;
-                    case '}' when isSingleLineComment || isMultiLineComment:
-                        // } inside comment
-                        continue;
-                    case '}' when prevChar == '{':
-                        // empty code block {}
-                        continue;
-                }
-
-                // only legit } end up here
-                int cbEndPosition = offset + lastSpecialCharIndex;
-
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine($"Found closing bracket at position: {cbEndPosition} (offset={offset}, lastSpecialCharIndex={lastSpecialCharIndex})");
-#endif
-
-                // create inner span to navigate to get code block start
-                var cbSpan = _TextStructureNavigator.GetSpanOfEnclosing(new SnapshotSpan(snapshot, cbEndPosition - 1, 1));
-                int cbStartPosition = cbSpan.Start;
-
-                var cbCodeSpan = cbSpan.GetText().AsSpan();
-
-                // Don't display tag for code blocks on same line
-                if (cbCodeSpan.IndexOf('\n') < 0)
-                {
+                    skippedBefore++;
                     continue;
                 }
 
-                // getting the code blocks header
-                // eigher from cbSpan or the span before that
-                int maxEndPosition = (cbCodeSpan[0] == '{') ? cbSpan.Start : cbEndPosition;
-
-                int indexOfFirstBracet = cbCodeSpan.IndexOf('{');
-                if (indexOfFirstBracet > 0)
+                // Skip if region is not multi-line
+                var startLine = snapshot.GetLineFromPosition(extent.Start);
+                var endLine = snapshot.GetLineFromPosition(extent.End);
+                if (startLine.LineNumber == endLine.LineNumber)
                 {
-                    maxEndPosition = cbSpan.Start + indexOfFirstBracet;
-                }
-                var cbHeader = GetCodeBlockHeader(snapshot, cbSpan, out int cbHeaderPosition, maxEndPosition);
-
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine($"  _VisibleSpan is {(_VisibleSpan.HasValue ? "set" : "null")}, VisibilityMode={CBETagPackage.CBEVisibilityMode}");
-#endif
-
-                // Always check tag visibility (includes caret position check)
-                if (!IsTagVisible(cbHeaderPosition, cbEndPosition, _VisibleSpan, snapshot))
-                {
-#if DEBUG
-                    System.Diagnostics.Debug.WriteLine($"  -> Skipping tag for code block at {cbEndPosition}");
-#endif
+                    skippedSingleLine++;
                     continue;
                 }
 
-                // Header as single line without too much spaces or tabs
+                // Get positions
+                int regionStart = extent.Start.Position;
+                int regionEnd = extent.End.Position;
+
+#if DEBUG
+                if (addedCount < 5 || processedCount <= 10) // Log first few for detail
+                {
+                    System.Diagnostics.Debug.WriteLine($"      Region #{processedCount}: {regionStart}-{regionEnd}");
+                }
+#endif
+
+                // Check if this region should be blocklisted (comments, etc.) before processing
+                var firstLineText = startLine.GetText().AsSpan().Trim();
+                if (IsBlocklistedRegion(firstLineText))
+                {
+                    skippedInvisible++;
+                    continue;
+                }
+
+                // Extract header from the first line of the region
+                ReadOnlySpan<char> cbHeader = GetHeaderFromRegion(region, snapshot, out int cbHeaderPosition);
+
+                // Check tag visibility (includes caret position check)
+                if (!IsTagVisible(cbHeaderPosition, regionEnd, _VisibleSpan, snapshot))
+                {
+                    skippedInvisible++;
+                    continue;
+                }
+
+                // Clean up header text - remove extra spaces and tabs
                 if (!cbHeader.IsEmpty)
                 {
                     PooledStringBuilder sbPool = PooledStringBuilder.GetInstance();
@@ -368,8 +431,8 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                     cbHeader = sbPool.ToStringAndFree(0, lastNonSpaceIndex);
                 }
 
-                // use cache or create new tag
-                AdornmentDataKey adornmentDataKey = new(cbStartPosition, cbEndPosition);
+                // Use cache or create new tag
+                AdornmentDataKey adornmentDataKey = new(regionStart, regionEnd);
                 _adornmentCache.TryGetValue(adornmentDataKey, out var cbAdornmentData);
 
                 CBETagControl tagElement;
@@ -398,7 +461,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
                     tagElement.TagClicked += Adornment_TagClicked;
 
-                    cbAdornmentData = new CBAdornmentData(cbStartPosition, cbEndPosition, cbHeaderPosition, tagElement);
+                    cbAdornmentData = new CBAdornmentData(regionStart, regionEnd, cbHeaderPosition, tagElement);
                     tagElement.AdornmentData = cbAdornmentData;
                     _adornmentCache.Add(adornmentDataKey, cbAdornmentData);
                 }
@@ -407,135 +470,136 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 tagElement.SetResourceReference(CBETagControl.TextColorProperty, EndTagColors.GetForegroundResourceKey(_TextView.TextBuffer.ContentType.TypeName));
 
                 // Add new tag to list
-                // Use PositionAffinity.Predecessor to ensure clicks on the left side of the tag
-                // place the caret after the }, not before it
+                // Place tag at the end of the region
                 IntraTextAdornmentTag cbTag = new(tagElement, null, PositionAffinity.Predecessor);
-                SnapshotSpan cbSnapshotSpan = new(snapshot, cbEndPosition + 1, 0);
+                SnapshotSpan cbSnapshotSpan = new(snapshot, regionEnd, 0);
                 TagSpan<IntraTextAdornmentTag> cbTagSpan = new(cbSnapshotSpan, cbTag);
                 list.Add(cbTagSpan);
+                addedCount++;
+            }
 
 #if DEBUG
-                System.Diagnostics.Debug.WriteLine($"  -> Adding tag at position {cbEndPosition + 1} for block {cbStartPosition}-{cbEndPosition}");
+            System.Diagnostics.Debug.WriteLine($"      Summary: Processed={processedCount}, Added={addedCount}, Skipped: Before={skippedBefore}, SingleLine={skippedSingleLine}, Invisible={skippedInvisible}");
 #endif
-
-            }
         }
-        catch (NullReferenceException)
+        catch (Exception ex)
         {
-            // May happen, when closing a text editor
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"      Exception in GetTagsCore: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"      Stack: {ex.StackTrace}");
+#endif
+            // May happen when closing a text editor or during rapid edits
         }
 
 #if DEBUG
         _watch.Stop();
-        if (_watch.Elapsed.Milliseconds > 100)
-        {
-            System.Diagnostics.Debug.WriteLine("Time elapsed: " + _watch.Elapsed +
-                " on Thread: " + System.Threading.Thread.CurrentThread.ManagedThreadId +
-                " in Span: " + span.Start.Position + ":" + span.End.Position + " length: " + span.Length);
-        }
+        System.Diagnostics.Debug.WriteLine($"      GetTagsCore completed: {list.Count} tags in {_watch.ElapsedMilliseconds}ms");
 #endif
 
         return new ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>>(list);
     }
 
     /// <summary>
-    /// Capture the header of a code block
+    /// Extracts the header text from a collapsible region
     /// Returns the text and outputs the start position within the snapshot
     /// </summary>
-    private ReadOnlySpan<char> GetCodeBlockHeader(
+    private ReadOnlySpan<char> GetHeaderFromRegion(
+        ICollapsible region,
         ITextSnapshot snapshot,
-        SnapshotSpan cbSpan,
-        out int headerStart,
-        int maxEndPosition = 0)
+        out int headerStart)
     {
-        var currentSpan = cbSpan;
-        int loops = 0;
-        // check all enclosing spans until the header is complete
-        do
+        var extent = region.Extent.GetSpan(snapshot);
+        var firstLine = snapshot.GetLineFromPosition(extent.Start);
+
+        headerStart = firstLine.Start.Position;
+
+        // Get text from the first line
+        var lineText = firstLine.GetText().AsSpan().Trim();
+
+        // For #endregion, don't show tags
+        if (lineText.StartsWith("#endregion"))
         {
-            // get text of current span
-            headerStart = currentSpan.Start;
-            Span headerSpan = Span.FromBounds(headerStart, Math.Min(maxEndPosition, currentSpan.Span.End));
-            if (headerSpan.Length == 0)
+            headerStart = -1;
+            return ReadOnlySpan<char>.Empty;
+        }
+
+        // Find opening brace and get everything before it
+        int braceIndex = lineText.IndexOf('{');
+        if (braceIndex > 0)
+        {
+            lineText = lineText.Slice(0, braceIndex).Trim();
+        }
+        else if (braceIndex == 0)
+        {
+            // Standalone block with just '{' - allow it with empty header
+            return ReadOnlySpan<char>.Empty;
+        }
+        // For #region and other non-brace collapsibles, take the whole line
+        // but remove #region/#endregion keywords
+        else if (lineText.StartsWith("#region"))
+        {
+            lineText = lineText.Slice(7).Trim(); // Remove "#region"
+        }
+
+        return lineText;
+    }
+
+    /// <summary>
+    /// Checks if a region header matches blocklisted patterns (comments, etc.)
+    /// </summary>
+    /// <param name="headerText">The header text to check</param>
+    /// <returns>True if the region should be ignored</returns>
+    private bool IsBlocklistedRegion(ReadOnlySpan<char> headerText)
+    {
+        if (headerText.IsEmpty)
+        {
+            return false; // Allow empty headers (standalone blocks)
+        }
+
+        // Block single-line comments
+        if (headerText.StartsWith("//"))
+        {
+            return true;
+        }
+
+        // Block multi-line comments
+        if (headerText.StartsWith("/*") || headerText.StartsWith("*"))
+        {
+            return true;
+        }
+
+        // Block XML documentation comments
+        if (headerText.StartsWith("///"))
+        {
+            return true;
+        }
+
+        // Block #endregion
+        if (headerText.StartsWith("#endregion"))
+        {
+            return true;
+        }
+
+        // Block using directives (namespace imports) but NOT using statements (resource disposal)
+        // using directives: "using System;" or "using Microsoft.VisualStudio.Shell;"
+        // using statements: "using (var conn = ...)" or "using var conn = ..."
+        if (headerText.StartsWith("using"))
+        {
+            // Check if it's a using directive (has a semicolon and no parentheses/var keyword)
+            // using statements will have either '(' or 'var' after 'using'
+            ReadOnlySpan<char> afterUsing = headerText.Slice(5).TrimStart();
+            
+            // If it starts with '(' or 'var', it's a using statement (keep it)
+            if (afterUsing.StartsWith("(") || afterUsing.StartsWith("var"))
             {
-                continue;
+                return false; // Keep using statements
             }
+            
+            // Otherwise, it's a using directive (block it)
+            return true;
+        }
 
-            var textSpan = snapshot.GetText(headerSpan).AsSpan().Trim();
-
-            // found header if it's not empty
-            if (textSpan.IsEmpty)
-            {
-                continue;
-            }
-
-            // recognize "else if" too
-            if (textSpan.StartsWith("if") && ((currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != default))
-            {
-                // check what comes before the "if"
-                Span outerSpan = Span.FromBounds(currentSpan.Start, Math.Min(maxEndPosition, currentSpan.Span.End));
-                string headerText2 = snapshot.GetText(outerSpan);
-                if (headerText2.StartsWith("else"))
-                {
-                    headerStart = outerSpan.Start;
-                    return headerText2;
-                }
-            }
-            else if (textSpan.IndexOfAny('\r', '\n') >= 0)
-            {
-                // skip annotations
-                int indexOfLineBreak;
-                int openBracets = 0;
-                bool annotaions = true;
-                PooledStringBuilder pooledStringBuilder = PooledStringBuilder.GetInstance();
-                StringBuilder stringBuilder = pooledStringBuilder.Builder;
-                while ((indexOfLineBreak = textSpan.IndexOfAny('\r', '\n')) >= 0 || !textSpan.IsEmpty)
-                {
-                    ReadOnlySpan<char> lineSpan;
-                    if (indexOfLineBreak < 0)
-                    {
-                        lineSpan = textSpan;
-                        textSpan = string.Empty;
-                    }
-                    else
-                    {
-                        lineSpan = textSpan.Slice(0, indexOfLineBreak);
-                        textSpan = textSpan.Slice(indexOfLineBreak + 1).TrimStart();
-                    }
-
-                    if (lineSpan.IsEmpty || lineSpan.IsWhiteSpace())
-                    {
-                        continue;
-                    }
-
-                    if (annotaions && (lineSpan[0] == '[' || openBracets > 0))
-                    {
-                        openBracets += lineSpan.Count('[');
-                        openBracets -= lineSpan.Count(']');
-                        continue;
-                    }
-
-                    annotaions = false;
-
-                    if (stringBuilder.Length > 0 && !char.IsWhiteSpace(stringBuilder[stringBuilder.Length - 1]))
-                    {
-                        stringBuilder.Append(' ');
-                    }
-
-                    stringBuilder.Append(lineSpan.Trim().ToArray());
-                }
-
-                return pooledStringBuilder.ToStringAndFree();
-            }
-
-            return textSpan;
-
-            // get next enclosing span of current span
-        } while (loops++ <= 10 && (currentSpan = _TextStructureNavigator.GetSpanOfEnclosing(currentSpan)) != default);
-
-        // No header found
-        headerStart = -1;
-        return null;
+        return false;
     }
 
     #endregion
@@ -649,9 +713,23 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
             return;
         }
 
+        // Stop and dispose the debounce timer
+        if (_LayoutChangedDebounceTimer != null)
+        {
+            _LayoutChangedDebounceTimer.Stop();
+            _LayoutChangedDebounceTimer.Tick -= OnLayoutChangedDebounceTimerTick;
+            _LayoutChangedDebounceTimer = null;
+        }
+
         CBETagPackage.Instance?.PackageOptionChanged -= OnPackageOptionChanged;
 
+        if (_OutliningManager != null)
+        {
+            _OutliningManager.RegionsChanged -= OnOutliningRegionsChanged;
+        }
+
         _TextView?.LayoutChanged -= OnTextViewLayoutChanged;
+        _TextView?.Caret?.PositionChanged -= Caret_PositionChanged;
         _TextView?.TextBuffer?.Changed -= TextBuffer_Changed;
 
         _Disposed = true;
@@ -685,7 +763,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 #if DEBUG
             System.Diagnostics.Debug.WriteLine($"IsTagVisible: caretIndex={caretIndex}, end={end}, end+1={end + 1}, start={start}");
 #endif
-            
+
             // Hide tag if caret is at the closing bracket or right after it (where the tag is placed)
             if (caretIndex == end || caretIndex == end + 1)
             {
@@ -777,27 +855,55 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
     private void OnTextViewLayoutChanged(object sender, TextViewLayoutChangedEventArgs e)
     {
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"=== OnTextViewLayoutChanged ===");
+        System.Diagnostics.Debug.WriteLine($"  TranslatedLines: {e.TranslatedLines.Count}");
+        System.Diagnostics.Debug.WriteLine($"  NewOrReformattedLines: {e.NewOrReformattedLines.Count}");
+#endif
+
         // get new visible span
         var visibleSpan = GetVisibleSpan(_TextView);
         if (!visibleSpan.HasValue)
         {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"  -> No visible span, returning");
+#endif
             return;
         }
+
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"  New visible span: {visibleSpan.Value.Start}-{visibleSpan.Value.End}");
+        if (_VisibleSpan.HasValue)
+        {
+            System.Diagnostics.Debug.WriteLine($"  Old visible span: {_VisibleSpan.Value.Start}-{_VisibleSpan.Value.End}");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"  Old visible span: (null)");
+        }
+#endif
 
         // only if new visible span is different from old
         if (_VisibleSpan.HasValue &&
             _VisibleSpan.Value.Start == visibleSpan.Value.Start &&
             _VisibleSpan.Value.End >= visibleSpan.Value.End)
         {
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"  -> Visible span unchanged, returning");
+#endif
             return;
         }
 
-        // invalidate new and/or old visible span
-        List<Span> invalidSpans = new(2);
+        // Calculate the span to invalidate
         var newSpan = visibleSpan.Value;
+        Span spanToInvalidate;
+        
         if (!_VisibleSpan.HasValue)
         {
-            invalidSpans.Add(newSpan);
+            spanToInvalidate = newSpan;
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"  -> First time, will invalidate new span: {newSpan.Start}-{newSpan.End}");
+#endif
         }
         else
         {
@@ -805,29 +911,70 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
             // invalidate two spans if old and new do not overlap
             if (newSpan.Start > oldSpan.End || newSpan.End < oldSpan.Start)
             {
-                invalidSpans.Add(newSpan);
-                invalidSpans.Add(oldSpan);
+                // Join both spans into one larger span
+                spanToInvalidate = Span.FromBounds(
+                    Math.Min(newSpan.Start, oldSpan.Start),
+                    Math.Max(newSpan.End, oldSpan.End));
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"  -> No overlap, will invalidate joined span");
+                System.Diagnostics.Debug.WriteLine($"     New: {newSpan.Start}-{newSpan.End}");
+                System.Diagnostics.Debug.WriteLine($"     Old: {oldSpan.Start}-{oldSpan.End}");
+                System.Diagnostics.Debug.WriteLine($"     Joined: {spanToInvalidate.Start}-{spanToInvalidate.End}");
+#endif
             }
             else
             {
                 // invalidate one big span (old and new joined)
-                invalidSpans.Add(newSpan.Join(oldSpan));
+                spanToInvalidate = newSpan.Join(oldSpan);
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"  -> Overlap detected, will invalidate joined span: {spanToInvalidate.Start}-{spanToInvalidate.End}");
+#endif
             }
         }
 
+        // Update the visible span
         _VisibleSpan = visibleSpan;
 
-        // Skip if all tags are shown always
-        if (CBETagPackage.CBEVisibilityMode == (int)VisibilityModes.Always)
+        // Store the span to invalidate and restart debounce timer
+        _PendingInvalidateSpan = spanToInvalidate;
+        _LayoutChangedDebounceTimer.Stop();
+        _LayoutChangedDebounceTimer.Start();
+
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"  -> Debounce timer started/restarted");
+        System.Diagnostics.Debug.WriteLine($"=== End OnTextViewLayoutChanged ===");
+#endif
+    }
+
+    /// <summary>
+    /// Handles the debounce timer tick event to invalidate the pending span
+    /// </summary>
+    private void OnLayoutChangedDebounceTimerTick(object sender, EventArgs e)
+    {
+        _LayoutChangedDebounceTimer.Stop();
+
+        if (!_PendingInvalidateSpan.HasValue)
         {
             return;
         }
 
-        // refresh tags
-        foreach (var span in invalidSpans)
-        {
-            InvalidateSpan(span, false);
-        }
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"=== OnLayoutChangedDebounceTimerTick ===");
+        System.Diagnostics.Debug.WriteLine($"  -> Invalidating pending span: {_PendingInvalidateSpan.Value.Start}-{_PendingInvalidateSpan.Value.End}");
+#endif
+
+        var spanToInvalidate = _PendingInvalidateSpan.Value;
+        _PendingInvalidateSpan = null;
+
+        // In "Always" mode, we still need to invalidate when scrolling
+        // to ensure tags are created for newly visible regions
+        // In "HeaderNotVisible" mode, we also need to invalidate to check visibility
+        // So we always invalidate on scroll
+        InvalidateSpan(spanToInvalidate, false);
+
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"=== End OnLayoutChangedDebounceTimerTick ===");
+#endif
     }
 
     #endregion

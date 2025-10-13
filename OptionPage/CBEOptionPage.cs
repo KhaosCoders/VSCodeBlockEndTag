@@ -32,21 +32,16 @@ public partial class CBEOptionPage : DialogPage
 
     // List of all supported languages
     // Never remove any! User preferences are stored for each array position
+    // Now using Visual Studio's outlining/folding regions - works with any language that has outlining support!
     private readonly SupportedLang[] _supportedLangs = {
         new() { Name = Languages.CSharp,       DisplayName = "CSharp C#" },
-        /*
-         All of these languages don't come with a decent TextStructureNavigator so they can't be used right now
-
-        new() { Name = "C/C++",        DisplayName = "C/C++" },
-        new() { Name = "PowerShell",   DisplayName = "PowerShell" },
-        new() { Name = "JavaScript",   DisplayName = "JavaScript" },
-        new() { Name = "CoffeeScript", DisplayName = "CoffeeScript" },
-        new() { Name = "TypeScript",   DisplayName = "TypeScript" },
-        new() { Name = "SCSS",         DisplayName = "SCSS/CSS" },
-        new() { Name = "LESS",         DisplayName = "LESS" },
-        new() { Name = "SASS",         DisplayName = "SASS" },
-        new() { Name = "HTML",         DisplayName = "HTML(JS/CSS)" }
-        */
+        //new() { Name = "C/C++",        DisplayName = "C/C++" },
+        //new() { Name = "JavaScript",   DisplayName = "JavaScript" },
+        //new() { Name = "TypeScript",   DisplayName = "TypeScript" },
+        //new() { Name = "PowerShell",   DisplayName = "PowerShell" },
+        //new() { Name = "XAML",         DisplayName = "XAML" },
+        //new() { Name = "JSON",         DisplayName = "JSON" },
+        //new() { Name = "XML",          DisplayName = "XML" },
     };
 
     /// <summary>
