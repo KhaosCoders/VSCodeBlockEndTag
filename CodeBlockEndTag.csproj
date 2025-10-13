@@ -98,6 +98,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".editorconfig" />
+    <None Include="agents.md" />
     <None Include="app.config" />
     <None Include="Key.snk" />
     <None Include="README.md" />
