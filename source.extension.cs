@@ -13,7 +13,7 @@ internal sealed partial class Vsix
     public const string Name = "CodeBlockEndTag";
     public const string Description = @"Adds an end tag to each code block with information about the header / condition";
     public const string Language = "en-US";
-    public const string Version = "3.2.1.5";
+    public const string Version = "3.2.1.6";
     public const string Author = "KhaosPrinz";
     public const string Tags = "code, block, codeblock, end, tag, tagger, bracket, brackets, info, information, condition, vscommand, vscommands";
 }

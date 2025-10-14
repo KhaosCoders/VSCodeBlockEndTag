@@ -382,7 +382,9 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 #endif
 
                 // Check if this region should be blocklisted (comments, etc.) before processing
+                // Strip closing brackets and whitespace from the beginning to handle cases like "} /*"
                 var firstLineText = startLine.GetText().AsSpan().Trim();
+                firstLineText = firstLineText.TrimStart('}').TrimStart();
                 if (IsBlocklistedRegion(firstLineText))
                 {
                     skippedInvisible++;
