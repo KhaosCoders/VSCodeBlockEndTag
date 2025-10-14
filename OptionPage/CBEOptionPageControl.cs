@@ -39,6 +39,7 @@ public partial class CBEOptionPageControl : UserControl
         rdbTextOnly.Checked = optionsPage.CBEDisplayMode == (int)DisplayModes.Text;
 
         txtMargin.Text = optionsPage.CBEMargin.ToString();
+        chkTelemetryEnabled.Checked = optionsPage.TelemetryEnabled;
     }
 
     private void LoadSupportedLanguagesToUI()
@@ -154,5 +155,10 @@ public partial class CBEOptionPageControl : UserControl
         {
             optionsPage.CBEMargin = 0;
         }
+    }
+
+    private void ChkTelemetryEnabled_CheckedChanged(object sender, EventArgs e)
+    {
+        optionsPage.TelemetryEnabled = chkTelemetryEnabled.Checked;
     }
 }

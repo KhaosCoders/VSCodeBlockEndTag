@@ -176,6 +176,25 @@ public partial class CBEOptionPage : DialogPage
     }
     private int cbeMargin = 4;
 
+    /// <summary>
+    /// Gets or sets whether anonymous usage data collection is enabled
+    /// </summary>
+    public bool TelemetryEnabled
+    {
+        get => telemetryEnabled;
+        set
+        {
+            if (telemetryEnabled != value)
+            {
+                telemetryEnabled = value;
+                // Update telemetry service
+                Telemetry.TelemetryService.Instance.SetEnabled(value);
+                OptionChanged?.Invoke(this);
+            }
+        }
+    }
+    private bool telemetryEnabled = true;
+
     #endregion
 
     #region save / load

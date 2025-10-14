@@ -51,6 +51,7 @@
             this.cntTagPos = new System.Windows.Forms.GroupBox();
             this.txtMargin = new System.Windows.Forms.TextBox();
             this.lblMargin = new System.Windows.Forms.Label();
+            this.chkTelemetryEnabled = new System.Windows.Forms.CheckBox();
             this.cntVisibilityMode.SuspendLayout();
             this.cntNavigateMode.SuspendLayout();
             this.cntDisplayMode.SuspendLayout();
@@ -327,10 +328,22 @@
             this.lblMargin.TabIndex = 0;
             this.lblMargin.Text = "Margin";
             // 
+            // chkTelemetryEnabled
+            // 
+            this.chkTelemetryEnabled.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.chkTelemetryEnabled.AutoSize = true;
+            this.chkTelemetryEnabled.Location = new System.Drawing.Point(10, 344);
+            this.chkTelemetryEnabled.Name = "chkTelemetryEnabled";
+            this.chkTelemetryEnabled.Size = new System.Drawing.Size(167, 30);
+            this.chkTelemetryEnabled.TabIndex = 15;
+            this.chkTelemetryEnabled.Text = "Send anonymous usage data \r\nto help improve this extension";
+            this.chkTelemetryEnabled.UseVisualStyleBackColor = true;
+            // 
             // CBEOptionPageControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.chkTelemetryEnabled);
             this.Controls.Add(this.cntLanguages);
             this.Controls.Add(this.cntInfo);
             this.Controls.Add(this.cntTagPos);
@@ -384,5 +397,6 @@
         private System.Windows.Forms.GroupBox cntTagPos;
         private System.Windows.Forms.TextBox txtMargin;
         private System.Windows.Forms.Label lblMargin;
+        private System.Windows.Forms.CheckBox chkTelemetryEnabled;
     }
 }

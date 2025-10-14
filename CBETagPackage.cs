@@ -20,7 +20,6 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using static Microsoft.VisualStudio.Threading.AsyncReaderWriterLock;
 
 namespace CodeBlockEndTag;
 
@@ -183,6 +182,9 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
         _optionPage = (OptionPage.CBEOptionPage)Instance.GetDialogPage(typeof(OptionPage.CBEOptionPage));
         _optionPage.OptionChanged += Page_OptionChanged;
 
+        // Initialize telemetry
+        await InitializeTelemetryAsync();
+
         // Update taggers, that were initialized before the package
         Page_OptionChanged(this);
 
@@ -191,9 +193,48 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
         Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), "InitializeAsync ended");
     }
 
+    /// <summary>
+    /// Initializes the telemetry service
+    /// </summary>
+    private async Task InitializeTelemetryAsync()
+    {
+        try
+        {
+            // Use Connection String (modern API) instead of deprecated Instrumentation Key
+            const string connectionString = "InstrumentationKey=3a7d81b1-803b-43c5-a782-68c95fc32325;IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/;ApplicationId=da69b065-c68c-4172-8ba3-aa3681bd12cc";
+
+            // Initialize telemetry service
+            Telemetry.TelemetryService.Instance.Initialize(
+                connectionString,
+                _optionPage?.TelemetryEnabled ?? true);
+
+            // Track extension loaded
+            var vsVersion = await GetVsVersionAsync();
+            Telemetry.TelemetryEvents.TrackExtensionLoaded(vsVersion.ToString());
+
+            Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), "Telemetry initialized");
+        }
+        catch (Exception ex)
+        {
+            // Telemetry should never break the extension
+            Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_WARNING, ToString(), $"Telemetry initialization failed: {ex.Message}");
+        }
+    }
+
     protected override void Dispose(bool disposing)
     {
         UnsubscribeFromColorChangeEvents();
+
+        // Flush and dispose telemetry
+        try
+        {
+            Telemetry.TelemetryService.Instance.Flush();
+            Telemetry.TelemetryService.Instance.Dispose();
+        }
+        catch
+        {
+            // Fail silently
+        }
 
         base.Dispose(disposing);
     }

@@ -498,8 +498,24 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         System.Diagnostics.Debug.WriteLine($"      GetTagsCore completed: {list.Count} tags in {_watch.ElapsedMilliseconds}ms");
 #endif
 
+        // Track telemetry for tag creation (only periodically to avoid spam)
+        try
+        {
+            if (list.Count > 0 && _tagCreationCounter++ % 50 == 0)
+            {
+                var language = _TextView?.TextBuffer?.ContentType?.TypeName ?? "Unknown";
+                Telemetry.TelemetryEvents.TrackTagsCreated(language, list.Count);
+            }
+        }
+        catch
+        {
+            // Telemetry should never break functionality
+        }
+
         return new ReadOnlyCollection<ITagSpan<IntraTextAdornmentTag>>(list);
     }
+
+    private int _tagCreationCounter = 0;
 
     /// <summary>
     /// Extracts the header text from a collapsible region
@@ -616,6 +632,16 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         if (_TextView == null)
         {
             return;
+        }
+
+        // Track tag click
+        try
+        {
+            Telemetry.TelemetryEvents.TrackTagClicked(jumpToHead);
+        }
+        catch
+        {
+            // Telemetry should never break functionality
         }
 
         SnapshotPoint targetPoint;
