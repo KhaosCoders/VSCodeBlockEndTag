@@ -98,7 +98,7 @@ public partial class CBEOptionPage : DialogPage
             .Select(ct => new SupportedLang
             {
                 Name = ct.TypeName,
-                DisplayName = GetDisplayName(ct.TypeName)
+                DisplayName = ContentTypeDisplayNameMapper.GetDisplayName(ct.TypeName)
             })
             .OrderBy(sl => sl.DisplayName)
             .ToArray();
@@ -128,21 +128,6 @@ public partial class CBEOptionPage : DialogPage
             _supportedLangs = languages;
             SupportedLangActive = languages.Select(_ => true).ToArray();
         }
-    }
-
-    /// <summary>
-    /// Formats content type names for display
-    /// </summary>
-    private string GetDisplayName(string contentTypeName)
-    {
-        return contentTypeName switch
-        {
-            "CSharp" => "C#",
-            "C/C++" => "C/C++",
-            "FSharp" => "F#",
-            "VisualBasic" => "Visual Basic",
-            _ => contentTypeName // Use original name for unknown or unmapped types
-        };
     }
 
     #endregion

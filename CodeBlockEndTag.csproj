@@ -76,6 +76,7 @@
     <Compile Include="Extensions\SpanExtensions.cs" />
     <Compile Include="IconMonikerSelector.cs" />
     <Compile Include="Microsoft.Internal.VisualStudio.Shell.Interop\IFontAndColorDefaultsProvider.cs" />
+    <Compile Include="OptionPage\ContentTypeDisplayNameMapper.cs" />
     <Compile Include="source.extension.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
