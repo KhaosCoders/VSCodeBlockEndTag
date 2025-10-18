@@ -465,7 +465,30 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
                 // Add new tag to list
                 // Place tag at the end of the region
                 IntraTextAdornmentTag cbTag = new(tagElement, null, PositionAffinity.Predecessor);
-                SnapshotSpan cbSnapshotSpan = new(snapshot, regionEnd, 0);
+
+                // Compute insertion position for the adornment. Use the region end as base but
+                // advance one character when the next character is a closing delimiter
+                // (for example '>' in XML/XAML or '}' in code) so the tag is rendered after
+                // the closing token instead of between characters like '/' and '>'.
+                int insertionIndex = regionEnd;
+                try
+                {
+                    if (insertionIndex < snapshot.Length)
+                    {
+                        char nextChar = snapshot[insertionIndex];
+                        if (nextChar == '>' || nextChar == '}' || nextChar == ')' || nextChar == ']')
+                        {
+                            insertionIndex = Math.Min(insertionIndex + 1, snapshot.Length);
+                        }
+                    }
+                }
+                catch
+                {
+                    // Be defensive - if snapshot access fails for some reason, fall back to regionEnd
+                    insertionIndex = Math.Min(regionEnd, snapshot.Length);
+                }
+
+                SnapshotSpan cbSnapshotSpan = new(snapshot, insertionIndex, 0);
                 TagSpan<IntraTextAdornmentTag> cbTagSpan = new(cbSnapshotSpan, cbTag);
                 list.Add(cbTagSpan);
                 addedCount++;
