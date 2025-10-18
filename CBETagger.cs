@@ -8,7 +8,6 @@ using Microsoft.VisualStudio.Imaging.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
-using Microsoft.VisualStudio.Text.Operations;
 using Microsoft.VisualStudio.Text.Outlining;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
@@ -35,11 +34,6 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
 
     // EventHandler for ITagger<IntraTextAdornmentTag> tags changed event
     private EventHandler<SnapshotSpanEventArgs> _changedEvent;
-
-    /// <summary>
-    /// Service by VisualStudio for fast navigation in structured texts
-    /// </summary>
-    private readonly ITextStructureNavigator _TextStructureNavigator;
 
     /// <summary>
     /// The outlining manager for this text view (provides collapsible regions)
@@ -105,9 +99,6 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         ThreadHelper.ThrowIfNotOnUIThread();
 
         _TextView = textView;
-
-        // Getting services provided by VisualStudio
-        _TextStructureNavigator = provider.GetTextStructureNavigator(_TextView.TextBuffer);
 
         // Get outlining manager for collapsible regions
         _OutliningManager = provider.OutliningManagerService?.GetOutliningManager(_TextView);
@@ -606,13 +597,13 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
             // Check if it's a using directive (has a semicolon and no parentheses/var keyword)
             // using statements will have either '(' or 'var' after 'using'
             ReadOnlySpan<char> afterUsing = headerText.Slice(5).TrimStart();
-            
+
             // If it starts with '(' or 'var', it's a using statement (keep it)
             if (afterUsing.StartsWith("(") || afterUsing.StartsWith("var"))
             {
                 return false; // Keep using statements
             }
-            
+
             // Otherwise, it's a using directive (block it)
             return true;
         }
@@ -925,7 +916,7 @@ internal class CBETagger : ITagger<IntraTextAdornmentTag>, IDisposable
         // Calculate the span to invalidate
         var newSpan = visibleSpan.Value;
         Span spanToInvalidate;
-        
+
         if (!_VisibleSpan.HasValue)
         {
             spanToInvalidate = newSpan;

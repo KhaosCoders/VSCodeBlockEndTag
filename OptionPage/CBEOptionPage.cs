@@ -1,14 +1,15 @@
-﻿using Microsoft.VisualStudio.Shell;
+﻿using CodeBlockEndTag.Converters;
+using CodeBlockEndTag.Model;
+using Microsoft.VisualStudio.Settings;
+using Microsoft.VisualStudio.Shell;
+using Microsoft.VisualStudio.Shell.Settings;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
-using System.Linq;
-using Microsoft.VisualStudio.Shell.Settings;
-using Microsoft.VisualStudio.Settings;
 using System.Windows.Threading;
-using CodeBlockEndTag.Converters;
-using CodeBlockEndTag.Model;
 
 namespace CodeBlockEndTag.OptionPage;
 
@@ -24,25 +25,15 @@ public partial class CBEOptionPage : DialogPage
 
     public CBEOptionPage()
     {
-        // default: all languages are enabled
-        SupportedLangActive = _supportedLangs.Select(_ => true).ToArray();
+        // Initialize with empty array - will be populated when ContentTypes are loaded
+        SupportedLangActive = Array.Empty<bool>();
+        _supportedLangs = Array.Empty<SupportedLang>();
     }
 
     #region supported languages
 
-    // List of all supported languages
-    // Never remove any! User preferences are stored for each array position
-    // Now using Visual Studio's outlining/folding regions - works with any language that has outlining support!
-    private readonly SupportedLang[] _supportedLangs = {
-        new() { Name = Languages.CSharp,       DisplayName = "CSharp C#" },
-        //new() { Name = "C/C++",        DisplayName = "C/C++" },
-        //new() { Name = "JavaScript",   DisplayName = "JavaScript" },
-        //new() { Name = "TypeScript",   DisplayName = "TypeScript" },
-        //new() { Name = "PowerShell",   DisplayName = "PowerShell" },
-        //new() { Name = "XAML",         DisplayName = "XAML" },
-        //new() { Name = "JSON",         DisplayName = "JSON" },
-        //new() { Name = "XML",          DisplayName = "XML" },
-    };
+    // List of all supported languages - dynamically loaded from Visual Studio's content types
+    private SupportedLang[] _supportedLangs;
 
     /// <summary>
     /// Gets an array with all supported languages display names
@@ -80,12 +71,78 @@ public partial class CBEOptionPage : DialogPage
     /// </summary>
     public bool IsLanguageSupported(string lang)
     {
-        int index = Array.FindIndex(_supportedLangs, sl => sl.Name.Equals(lang));
+        // Ensure languages are initialized before showing the UI
+        if (_supportedLangs.Length == 0)
+            InitializeSupportedLanguages();
+
+        int index = Array.FindIndex(_supportedLangs, sl => sl.Name.Equals(lang, StringComparison.OrdinalIgnoreCase));
         if (index >= 0 && index < SupportedLangActive.Length)
         {
             return SupportedLangActive[index];
         }
         return false;
+    }
+
+    /// <summary>
+    /// Initialize supported languages from Visual Studio's content type registry
+    /// </summary>
+    public void InitializeSupportedLanguages()
+    {
+        if (CBETagPackage.ContentTypes.Count == 0)
+        {
+            return; // ContentTypes not loaded yet
+        }
+
+        // Build language list from content types
+        var languages = CBETagPackage.ContentTypes
+            .Select(ct => new SupportedLang
+            {
+                Name = ct.TypeName,
+                DisplayName = GetDisplayName(ct.TypeName)
+            })
+            .OrderBy(sl => sl.DisplayName)
+            .ToArray();
+
+        // If we already have languages loaded, preserve user settings
+        if (_supportedLangs.Length > 0 && languages.Length > 0)
+        {
+            // Create a dictionary of old settings
+            var oldSettings = _supportedLangs
+                .Select((lang, index) => new { lang.Name, Active = index < SupportedLangActive.Length && SupportedLangActive[index] })
+                .ToDictionary(x => x.Name, x => x.Active, StringComparer.OrdinalIgnoreCase);
+
+            // Apply old settings to new language list
+            var newActiveArray = new bool[languages.Length];
+            for (int i = 0; i < languages.Length; i++)
+            {
+                // Use old setting if available, otherwise default to true
+                newActiveArray[i] = oldSettings.TryGetValue(languages[i].Name, out bool active) ? active : true;
+            }
+
+            _supportedLangs = languages;
+            SupportedLangActive = newActiveArray;
+        }
+        else
+        {
+            // First time initialization - enable all languages by default
+            _supportedLangs = languages;
+            SupportedLangActive = languages.Select(_ => true).ToArray();
+        }
+    }
+
+    /// <summary>
+    /// Formats content type names for display
+    /// </summary>
+    private string GetDisplayName(string contentTypeName)
+    {
+        return contentTypeName switch
+        {
+            "CSharp" => "C#",
+            "C/C++" => "C/C++",
+            "FSharp" => "F#",
+            "VisualBasic" => "Visual Basic",
+            _ => contentTypeName // Use original name for unknown or unmapped types
+        };
     }
 
     #endregion
@@ -166,7 +223,8 @@ public partial class CBEOptionPage : DialogPage
     public int CBEMargin
     {
         get => cbeMargin;
-        set {
+        set
+        {
             if (cbeMargin != value)
             {
                 cbeMargin = value;
@@ -213,6 +271,23 @@ public partial class CBEOptionPage : DialogPage
             userSettingsStore.CreateCollection(CollectionName);
         }
 
+        // Save language settings as name:value pairs for better compatibility
+        // Format: "LanguageName1:1,LanguageName2:0,..." where 1=enabled, 0=disabled
+        if (_supportedLangs != null && _supportedLangs.Length > 0)
+        {
+            var languageSettings = new List<string>();
+            for (int i = 0; i < _supportedLangs.Length && i < SupportedLangActive.Length; i++)
+            {
+                languageSettings.Add($"{_supportedLangs[i].Name}:{(SupportedLangActive[i] ? "1" : "0")}");
+            }
+
+            userSettingsStore.SetString(
+                CollectionName,
+                "SupportedLanguages",
+                string.Join(",", languageSettings));
+        }
+
+        // Keep legacy format for backward compatibility (will be removed in future versions)
         var converter = new BoolArrayConverter();
         userSettingsStore.SetString(
             CollectionName,
@@ -229,14 +304,67 @@ public partial class CBEOptionPage : DialogPage
         var settingsManager = new ShellSettingsManager(ServiceProvider.GlobalProvider);
         var userSettingsStore = settingsManager.GetWritableSettingsStore(SettingsScope.UserSettings);
 
-        if (!userSettingsStore.PropertyExists(CollectionName, nameof(SupportedLangActive)))
+        if (!userSettingsStore.CollectionExists(CollectionName))
         {
             return;
         }
 
-        var converter = new BoolArrayConverter();
-        SupportedLangActive = converter.ConvertFrom(
-            userSettingsStore.GetString(CollectionName, nameof(SupportedLangActive))) as bool[];
+        // Ensure languages are initialized before showing the UI
+        if (_supportedLangs.Length == 0)
+            InitializeSupportedLanguages();
+
+        // Try loading new name-based format first
+        if (userSettingsStore.PropertyExists(CollectionName, "SupportedLanguages"))
+        {
+            try
+            {
+                var settingsString = userSettingsStore.GetString(CollectionName, "SupportedLanguages");
+                var languageSettings = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var pair in settingsString.Split(','))
+                {
+                    var parts = pair.Split(':');
+                    if (parts.Length == 2)
+                    {
+                        languageSettings[parts[0]] = parts[1] == "1";
+                    }
+                }
+
+                // Apply loaded settings to current language list
+                if (_supportedLangs != null && _supportedLangs.Length > 0)
+                {
+                    var newActiveArray = new bool[_supportedLangs.Length];
+                    for (int i = 0; i < _supportedLangs.Length; i++)
+                    {
+                        // Use saved setting if available, otherwise default to true
+                        newActiveArray[i] = languageSettings.TryGetValue(_supportedLangs[i].Name, out bool active) ? active : true;
+                    }
+                    SupportedLangActive = newActiveArray;
+                }
+
+                return; // Successfully loaded new format
+            }
+            catch
+            {
+                // Fall through to legacy format
+            }
+        }
+
+        // Fall back to legacy positional format for backward compatibility
+        if (userSettingsStore.PropertyExists(CollectionName, nameof(SupportedLangActive)))
+        {
+            var converter = new BoolArrayConverter();
+            var loadedArray = converter.ConvertFrom(
+                userSettingsStore.GetString(CollectionName, nameof(SupportedLangActive))) as bool[];
+
+            // Only use if we have languages defined
+            if (loadedArray != null && _supportedLangs != null && _supportedLangs.Length > 0)
+            {
+                // Map old positional settings to new language list (less reliable)
+                var minLength = Math.Min(loadedArray.Length, SupportedLangActive.Length);
+                Array.Copy(loadedArray, SupportedLangActive, minLength);
+            }
+        }
     }
 
     #endregion
@@ -245,8 +373,13 @@ public partial class CBEOptionPage : DialogPage
     {
         get
         {
-            CBEOptionPageControl page = new();
-            page.optionsPage = this;
+            // Ensure languages are initialized before showing the UI
+            InitializeSupportedLanguages();
+
+            CBEOptionPageControl page = new()
+            {
+                optionsPage = this
+            };
             page.Initialize();
             return page;
         }

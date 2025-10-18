@@ -9,13 +9,16 @@ using EnvDTE;
 using EnvDTE80;
 using Microsoft.Internal.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Text.Outlining;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
+using System.Composition;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -96,14 +99,14 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
     /// <summary>
     /// Load the list of content types
     /// </summary>
-    internal static void ReadContentTypes(IContentTypeRegistryService ContentTypeRegistryService)
+    public void ReadContentTypes(IContentTypeRegistryService contentTypeRegistryService)
     {
         if (ContentTypes.Count > 0)
         {
             return;
         }
 
-        foreach (var ct in ContentTypeRegistryService.ContentTypes)
+        foreach (var ct in contentTypeRegistryService.ContentTypes)
         {
             if (ct.IsOfType("code"))
             {
@@ -157,7 +160,7 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
     /// Initialization of the package; this method is called right after the package is sited, so this is the place
     /// where you can put all the initialization code that rely on services provided by VisualStudio.
     /// </summary>
-    protected override async System.Threading.Tasks.Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+    protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
     {
         await base.InitializeAsync(cancellationToken, progress).ConfigureAwait(false);
 
@@ -178,6 +181,11 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
 
         Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), "Register IFontAndColorDefaultsProvider");
         ((IServiceContainer)this).AddService(typeof(IFontAndColorDefaultsProvider), this, true);
+
+        // Read all content types
+        var componentModel = await GetServiceAsync(typeof(SComponentModel)) as IComponentModel;
+        var contentTypeRegistryService = componentModel?.GetService<IContentTypeRegistryService>();
+        ReadContentTypes(contentTypeRegistryService);
 
         _optionPage = (OptionPage.CBEOptionPage)Instance.GetDialogPage(typeof(OptionPage.CBEOptionPage));
         _optionPage.OptionChanged += Page_OptionChanged;
