@@ -238,6 +238,16 @@ public partial class CBEOptionPage : DialogPage
     }
     private bool telemetryEnabled = true;
 
+    /// <summary>
+    /// Gets or sets whether the user has seen the language support info bar
+    /// </summary>
+    public bool LanguageSupportInfoBarSeen
+    {
+        get => languageSupportInfoBarSeen;
+        set => languageSupportInfoBarSeen = value;
+    }
+    private bool languageSupportInfoBarSeen = false;
+
     #endregion
 
     #region save / load

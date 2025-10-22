@@ -5,6 +5,7 @@
 //------------------------------------------------------------------------------
 
 using CodeBlockEndTag.Model;
+using CodeBlockEndTag.Services;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.Internal.VisualStudio.Shell.Interop;
@@ -12,13 +13,11 @@ using Microsoft.VisualStudio;
 using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
-using Microsoft.VisualStudio.Text.Outlining;
 using Microsoft.VisualStudio.Utilities;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
-using System.Composition;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -82,6 +81,11 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
     /// Instance of ActivityLog
     /// </summary>
     public IVsActivityLog Log { get; private set; }
+
+    /// <summary>
+    /// Info bar service for showing notifications
+    /// </summary>
+    private InfoBarService _infoBarService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CBETagPackage"/> class.
@@ -193,6 +197,15 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
         // Initialize telemetry
         await InitializeTelemetryAsync();
 
+        // Initialize info bar service
+        _infoBarService = new InfoBarService(this, Log);
+
+        // Show language support info bar if not seen before
+        if (!_optionPage.LanguageSupportInfoBarSeen)
+        {
+            ShowLanguageSupportInfoBar();
+        }
+
         // Update taggers, that were initialized before the package
         Page_OptionChanged(this);
 
@@ -248,6 +261,45 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
     }
 
     private void Page_OptionChanged(object _) => PackageOptionChanged?.Invoke(this);
+
+    /// <summary>
+    /// Shows the language support info bar
+    /// </summary>
+    private void ShowLanguageSupportInfoBar()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+
+        try
+        {
+            _infoBarService?.ShowLanguageSupportInfoBar();
+        }
+        catch (Exception ex)
+        {
+            Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, ToString(), $"Error showing language support info bar: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Marks the language support info bar as seen
+    /// </summary>
+    public void MarkLanguageSupportInfoBarAsSeen()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+
+        try
+        {
+            if (_optionPage != null)
+            {
+                _optionPage.LanguageSupportInfoBarSeen = true;
+                _optionPage.SaveSettingsToStorage();
+                Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), "Language support info bar marked as seen");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, ToString(), $"Error marking info bar as seen: {ex.Message}");
+        }
+    }
 
     private static void FontAndColorsChanged(object sender, EventArgs args)
     {
