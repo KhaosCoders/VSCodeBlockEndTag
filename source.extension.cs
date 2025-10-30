@@ -10,11 +10,12 @@ namespace CodeBlockEndTag
     {
         public const string Id = "CodeBlockEndTag.KhaosCoders.5743e483-e347-4815-8c9d-7fc46ca75382";
         public const string Name = "CodeBlockEndTag";
-        public const string Description = @"Adds an end tag to each code block with information about the header / condition";
+        public const string Description = @"All folding regions in Visual Studio will get tagged at the end with information about this region. 
+This includes actual #regions, code blocks or any other form of folding.";
         public const string Language = "en-US";
         public const string Version = "4.0.0.7";
         public const string Author = "KhaosPrinz";
-        public const string Tags = "code, block, codeblock, end, tag, tagger, bracket, brackets, info, information, condition, vscommand, vscommands";
+        public const string Tags = "code, block, codeblock, end, tag, tagger, bracket, brackets, info, information, condition, vscommand, vscommands, region";
         public const bool IsPreview = false;
     }
 }
