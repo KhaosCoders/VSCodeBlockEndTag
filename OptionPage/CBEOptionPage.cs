@@ -26,8 +26,8 @@ public partial class CBEOptionPage : DialogPage
     public CBEOptionPage()
     {
         // Initialize with empty array - will be populated when ContentTypes are loaded
-        SupportedLangActive = Array.Empty<bool>();
-        _supportedLangs = Array.Empty<SupportedLang>();
+        SupportedLangActive = [];
+        _supportedLangs = [];
     }
 
     #region supported languages
@@ -76,11 +76,24 @@ public partial class CBEOptionPage : DialogPage
             InitializeSupportedLanguages();
 
         int index = Array.FindIndex(_supportedLangs, sl => sl.Name.Equals(lang, StringComparison.OrdinalIgnoreCase));
-        if (index >= 0 && index < SupportedLangActive.Length)
+        if (index < 0 || index >= SupportedLangActive.Length)
+        {
+            return false;
+        }
+
+        // C# is always free to use
+        if (lang.Equals(Languages.CSharp, StringComparison.OrdinalIgnoreCase))
         {
             return SupportedLangActive[index];
         }
-        return false;
+
+        // Other languages require PRO license
+        if (!Services.LicenseService.HasValidProLicense())
+        {
+            return false;
+        }
+
+        return SupportedLangActive[index];
     }
 
     /// <summary>
@@ -103,6 +116,8 @@ public partial class CBEOptionPage : DialogPage
             .OrderBy(sl => sl.DisplayName)
             .ToArray();
 
+        bool hasProLicense = Services.LicenseService.HasValidProLicense();
+
         // If we already have languages loaded, preserve user settings
         if (_supportedLangs.Length > 0 && languages.Length > 0)
         {
@@ -115,8 +130,18 @@ public partial class CBEOptionPage : DialogPage
             var newActiveArray = new bool[languages.Length];
             for (int i = 0; i < languages.Length; i++)
             {
-                // Use old setting if available, otherwise default to true
-                newActiveArray[i] = oldSettings.TryGetValue(languages[i].Name, out bool active) ? active : true;
+                bool isCSharp = languages[i].Name.Equals(Languages.CSharp, StringComparison.OrdinalIgnoreCase);
+
+                // Use old setting if available, otherwise default based on language and license
+                if (oldSettings.TryGetValue(languages[i].Name, out bool active))
+                {
+                    newActiveArray[i] = active;
+                }
+                else
+                {
+                    // New language discovered: C# always enabled by default, others only if PRO license exists
+                    newActiveArray[i] = isCSharp || hasProLicense;
+                }
             }
 
             _supportedLangs = languages;
@@ -124,11 +149,25 @@ public partial class CBEOptionPage : DialogPage
         }
         else
         {
-            // First time initialization - enable all languages by default
+            // First time initialization
             _supportedLangs = languages;
-            SupportedLangActive = languages.Select(_ => true).ToArray();
+            var newActiveArray = new bool[languages.Length];
+
+            for (int i = 0; i < languages.Length; i++)
+            {
+                bool isCSharp = languages[i].Name.Equals(Languages.CSharp, StringComparison.OrdinalIgnoreCase);
+                // C# always enabled by default, others only if PRO license exists
+                newActiveArray[i] = isCSharp || hasProLicense;
+            }
+
+            SupportedLangActive = newActiveArray;
         }
     }
+
+    /// <summary>
+    /// Gets the internal supported languages array (for UI access)
+    /// </summary>
+    internal SupportedLang[] GetSupportedLanguages() => _supportedLangs;
 
     #endregion
 
@@ -247,6 +286,16 @@ public partial class CBEOptionPage : DialogPage
         set => languageSupportInfoBarSeen = value;
     }
     private bool languageSupportInfoBarSeen = false;
+
+    /// <summary>
+    /// Gets or sets the PRO license token (JWT)
+    /// </summary>
+    public string LicenseToken
+    {
+        get => licenseToken;
+        set => licenseToken = value ?? string.Empty;
+    }
+    private string licenseToken = string.Empty;
 
     #endregion
 

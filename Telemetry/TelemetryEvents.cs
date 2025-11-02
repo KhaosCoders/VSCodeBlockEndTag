@@ -14,6 +14,12 @@ internal static class TelemetryEvents
     public const string SettingChanged = "SettingChanged";
     public const string LanguageUsed = "LanguageUsed";
     public const string PerformanceMetric = "PerformanceMetric";
+    public const string LicenseActivationAttempted = "LicenseActivationAttempted";
+    public const string LicenseActivationSucceeded = "LicenseActivationSucceeded";
+    public const string LicenseActivationFailed = "LicenseActivationFailed";
+    public const string LicenseTokenRequested = "LicenseTokenRequested";
+    public const string StorePageOpened = "StorePageOpened";
+    public const string OptionsPageOpened = "OptionsPageOpened";
 
     // Property keys
     public const string PropertyLanguage = "Language";
@@ -27,6 +33,12 @@ internal static class TelemetryEvents
     public const string PropertyTagCount = "TagCount";
     public const string PropertyJumpToHead = "JumpToHead";
     public const string PropertyElapsedMs = "ElapsedMs";
+    public const string PropertyHasEmail = "HasEmail";
+    public const string PropertySuccess = "Success";
+    public const string PropertyErrorType = "ErrorType";
+    public const string PropertyErrorMessage = "ErrorMessage";
+    public const string PropertyActivationType = "ActivationType";
+    public const string PropertyHasLicense = "HasLicense";
 
     /// <summary>
     /// Track extension loaded event
@@ -116,5 +128,88 @@ internal static class TelemetryEvents
         }
 
         TelemetryService.Instance.TrackEvent($"{PerformanceMetric}_{operation}", properties, metrics);
+    }
+
+    /// <summary>
+    /// Track license activation attempt
+    /// </summary>
+    public static void TrackLicenseActivationAttempted(bool hasEmail, string activationType = "new")
+    {
+        var properties = new Dictionary<string, string>
+        {
+            { PropertyHasEmail, hasEmail.ToString() },
+            { PropertyActivationType, activationType }
+        };
+
+        TelemetryService.Instance.TrackEvent(LicenseActivationAttempted, properties);
+    }
+
+    /// <summary>
+    /// Track successful license activation
+    /// </summary>
+    public static void TrackLicenseActivationSucceeded(string activationType = "new")
+    {
+        var properties = new Dictionary<string, string>
+        {
+            { PropertySuccess, "true" },
+            { PropertyActivationType, activationType }
+        };
+
+        TelemetryService.Instance.TrackEvent(LicenseActivationSucceeded, properties);
+    }
+
+    /// <summary>
+    /// Track failed license activation
+    /// </summary>
+    public static void TrackLicenseActivationFailed(string errorType, string errorMessage, string activationType = "new")
+    {
+        var properties = new Dictionary<string, string>
+        {
+            { PropertySuccess, "false" },
+            { PropertyErrorType, errorType },
+            { PropertyErrorMessage, errorMessage ?? "Unknown" },
+            { PropertyActivationType, activationType }
+        };
+
+        TelemetryService.Instance.TrackEvent(LicenseActivationFailed, properties);
+    }
+
+    /// <summary>
+    /// Track license token request (re-activation)
+    /// </summary>
+    public static void TrackLicenseTokenRequested(bool hasEmail)
+    {
+        var properties = new Dictionary<string, string>
+        {
+            { PropertyHasEmail, hasEmail.ToString() }
+        };
+
+        TelemetryService.Instance.TrackEvent(LicenseTokenRequested, properties);
+    }
+
+    /// <summary>
+    /// Track store page opened event
+    /// </summary>
+    public static void TrackStorePageOpened(bool hasEmail)
+    {
+        var properties = new Dictionary<string, string>
+        {
+            { PropertyHasEmail, hasEmail.ToString() }
+        };
+
+        TelemetryService.Instance.TrackEvent(StorePageOpened, properties);
+    }
+
+    /// <summary>
+    /// Track options page opened event
+    /// </summary>
+    public static void TrackOptionsPageOpened(bool hasLicense)
+    {
+        var properties = new Dictionary<string, string>
+        {
+            { PropertyHasLicense, hasLicense.ToString() }
+        };
+
+        TelemetryService.Instance.TrackEvent(OptionsPageOpened, properties);
     }
 }

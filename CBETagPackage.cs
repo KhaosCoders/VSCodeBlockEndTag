@@ -194,6 +194,30 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
         _optionPage = (OptionPage.CBEOptionPage)Instance.GetDialogPage(typeof(OptionPage.CBEOptionPage));
         _optionPage.OptionChanged += Page_OptionChanged;
 
+        // Initialize license service with stored token
+        Services.LicenseService.Initialize(_optionPage.LicenseToken);
+
+        // Validate license on startup and log status
+        if (!string.IsNullOrEmpty(_optionPage.LicenseToken))
+        {
+            if (Services.LicenseService.HasValidProLicense())
+            {
+                var expDate = Services.LicenseService.GetLicenseExpirationDate();
+                Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(),
+                 $"PRO license active, expires: {expDate?.ToString() ?? "unknown"}");
+            }
+            else
+            {
+                Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_WARNING, ToString(),
+                "PRO license expired or invalid");
+            }
+        }
+        else
+        {
+            Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(),
+                       "No PRO license - running in free mode (C# only)");
+        }
+
         // Initialize telemetry
         await InitializeTelemetryAsync();
 

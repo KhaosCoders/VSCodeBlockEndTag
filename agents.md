@@ -12,6 +12,151 @@
 - **Repository**: https://github.com/KhaosCoders/VSCodeBlockEndTag
 - **Marketplace**: https://marketplace.visualstudio.com/items?itemName=KhaosPrinz.CodeBlockEndTag
 
+## Licensing Model
+
+### Free vs PRO
+
+The extension uses a **freemium licensing model**:
+
+- **FREE**: C# language support is completely free to use, no restrictions
+- **PRO**: All other languages require a PRO license (yearly subscription)
+
+**PRO License Features:**
+- Unlocks support for all languages (Visual Basic, F#, TypeScript, JavaScript, C++, Python, PowerShell, etc.)
+- One-year subscription model
+- License activation tied to user's Visual Studio email address
+- JWT-based license token stored in user settings
+- Automatic expiration date tracking
+
+**Purchase & Activation:**
+- PRO licenses available at: `https://khaoscoders.onfastspring.com/cbe-1y`
+- License key required for activation
+- Email address automatically retrieved from Visual Studio settings
+- License binding confirmation required before first-time activation
+- Activation status displayed in options page with expiration date
+
+### License Service
+
+The extension includes a `Services.LicenseService` that manages license validation:
+
+**Key Methods:**
+- `HasValidProLicense()`: Returns whether user has a valid, active PRO license
+- `GetLicenseExpirationDate()`: Returns license expiration date (if available)
+- `GetVisualStudioEmail()`: Retrieves the user's email from Visual Studio settings
+- `RequireActivatedTokenAsync(key, email)`: Attempts to re-acquire an already activated license token
+- `ActivateLicenseAsync(key, email)`: Activates a new license key and binds it to the user's email
+
+**License Storage:**
+- JWT token stored in `CBEOptionPage.LicenseToken` property
+- Persisted to Visual Studio settings via `SaveSettingsToStorage()`
+- Token validated on extension startup and when checking language support
+
+### Language Restriction Enforcement
+
+Language support restrictions are enforced at multiple levels:
+
+#### 1. **UI Level (CBEOptionPageControl)**
+- Languages without PRO license display with 🔒 [PRO] indicator
+- Attempting to enable non-C# languages without PRO shows a modal dialog:
+  - Message: "This language requires a PRO license.\n\nC# is free to use, but all other languages require a PRO license.\n\nClick 'Buy Pro' to unlock all languages!"
+  - Checkbox change is prevented (`e.NewValue = CheckState.Unchecked`)
+- License status displayed with color coding:
+  - **Green**: "✓ PRO License Active (Expires: [date])"
+  - **Gray**: "No PRO License - C# only"
+
+#### 2. **Validation Logic**
+```csharp
+// In LviLanguages_ItemCheck event handler
+var supportedLangs = optionsPage.GetSupportedLanguages();
+string langName = supportedLangs[e.Index].Name;
+bool isCSharp = langName.Equals(Languages.CSharp, StringComparison.OrdinalIgnoreCase);
+
+// Prevent enabling non-C# languages without PRO license
+if (!isCSharp && !Services.LicenseService.HasValidProLicense() && e.NewValue == CheckState.Checked)
+{
+    e.NewValue = CheckState.Unchecked;
+    // Show dialog...
+}
+```
+
+#### 3. **C# Constant Definition**
+The `Languages.CSharp` constant is used to identify the free language:
+- Comparison is case-insensitive
+- Always allowed regardless of license status
+
+### License Activation Flow
+
+**User Experience:**
+
+1. **Pre-Purchase Check**
+   - User clicks "Buy Pro" link in options page
+   - Extension attempts to retrieve Visual Studio email
+   - If email not found, warns user: "Couldn't read your Microsoft email address from Visual Studio settings. This is required for license activation after you bought a key."
+   - Browser opens to store URL
+
+2. **Activation Process**
+   - User enters license key in text box
+   - "Activate" button enabled only when key is non-empty
+   - User clicks "Activate" button
+   - Button disabled and text changes to "Activating..."
+   - Email validation performed
+   - Attempt to re-acquire token if already activated (`RequireActivatedTokenAsync`)
+   - If not already activated:
+     - Confirmation dialog: "This will bind the license key to your email address:\n\n{email}\n\nDo you want to continue?"
+     - If confirmed, calls `ActivateLicenseAsync(key, email)`
+   - JWT token saved to settings
+   - Success message shown
+   - UI refreshed to show active license status
+   - Language list updated to remove 🔒 indicators
+   - License key input cleared
+
+3. **Error Handling**
+   - Missing email: "Email address is required for license activation."
+   - Empty key: "Please enter a license key."
+   - Activation failure: "Activation failed: {exception message}"
+   - All errors shown as modal dialogs with appropriate icons
+
+**Technical Implementation:**
+
+```csharp
+private async void BtnActivateLicense_Click(object sender, EventArgs e)
+{
+    // Validate input
+  // Retrieve email
+    // Try re-acquiring token first
+    // If needed, confirm and activate
+    // Save token to settings
+    // Refresh UI
+    // Handle errors
+}
+```
+
+### License Status Display
+
+**Options Page UI Elements:**
+
+- **lblLicenseStatus**: Shows current license state
+  - With PRO: Green text, checkmark, expiration date
+  - Without PRO: Gray text, limitation notice
+  
+- **lblProInfo**: Contextual message
+  - With PRO: "All features unlocked!"
+  - Without PRO: "Unlock all features with PRO!"
+
+- **lviLanguages**: CheckedListBox with language toggles
+  - C# always available (no lock icon)
+  - Other languages show "🔒 [PRO]" suffix when no license
+
+- **txtLicenseKey**: TextBox for entering activation key
+  - TextChanged event enables/disables activation button
+  
+- **btnActivateLicense**: Button to perform activation
+  - Async handler for activation process
+  - UI feedback during activation
+
+- **lnkBuyPro**: LinkLabel to store URL
+  - Pre-validates email before opening browser
+
 ## What It Does
 
 The extension automatically:
@@ -22,6 +167,31 @@ The extension automatically:
 5. Intelligently shows/hides tags based on visibility settings and caret position
 6. Supports customization through Visual Studio options
 7. Works with all Visual Studio content types that support outlining
+
+### License-Aware Language Management
+
+The extension now integrates license checking into language support:
+
+1. **On Options Page Load**:
+   - Checks `Services.LicenseService.HasValidProLicense()`
+   - Adds lock indicators to non-C# languages if no license
+   - Displays license status and expiration
+
+2. **On Language Toggle**:
+   - Validates license before allowing non-C# activation
+   - Shows informative dialog if PRO required
+   - Prevents checkbox state change for locked languages
+
+3. **On License Activation**:
+   - Immediately refreshes language list
+   - Removes lock indicators
+   - Updates license status display
+   - Persists JWT token to settings
+
+4. **On Extension Startup** (handled in other components):
+   - Validates stored JWT token
+   - Applies language restrictions based on license
+   - May prompt for re-activation if expired
 
 ## Core Architecture
 
@@ -78,7 +248,7 @@ WPF control that renders the visual tag. Inherits from `ButtonBase`.
 - Uses dependency properties for data binding
 - Fires `TagClicked` event with navigation information
 
-#### 5. **IconMonikerSelector** (`IconMonikerSelector.cs`)
+#### 6. **IconMonikerSelector** (`IconMonikerSelector.cs`)
 Intelligent icon selection based on code construct type.
 
 **Capabilities:**
@@ -86,6 +256,22 @@ Intelligent icon selection based on code construct type.
 - Detects access modifiers (public, private, protected, internal)
 - Maps keywords to appropriate Visual Studio `KnownMonikers`
 - Supports C#, C/C++, and PowerShell keywords
+
+#### 7. **License Service** (`Services/LicenseService.cs`)
+Manages PRO license validation and activation.
+
+**Key responsibilities:**
+- Validates JWT tokens for expiration and authenticity
+- Retrieves Visual Studio user email from settings
+- Activates new license keys via API call
+- Re-acquires tokens for previously activated keys
+- Provides license status for UI and enforcement logic
+
+**Integration points:**
+- Called by `CBEOptionPageControl` for UI decisions
+- Called by language support validation logic
+- Token stored in `CBEOptionPage.LicenseToken`
+- Email retrieved from Visual Studio's `IVsShell` service
 
 ### Data Models
 
@@ -100,6 +286,11 @@ Struct storing metadata about a code block:
 Struct representing a supported language/content type:
 - `Name`: Internal content type name (e.g., "CSharp", "TypeScript")
 - `DisplayName`: User-friendly display name (e.g., "C#", "TypeScript")
+
+#### Languages Constant (`Model/Languages.cs` or similar)
+Contains constant for free language identification:
+- `Languages.CSharp`: The only language available without PRO license
+- Used for case-insensitive comparison in license checks
 
 #### Enums
 - **DisplayModes**: Text, Icon, IconAndText
@@ -119,6 +310,7 @@ Dialog page for extension settings with advanced language management:
 - Margin spacing (pixels between brace and tag)
 - Telemetry opt-in/opt-out
 - Per-language enable/disable toggles
+- **LicenseToken**: JWT token for PRO license (stored as string)
 
 **Language Support Features:**
 - Dynamic language discovery from VS content type registry
@@ -129,6 +321,12 @@ Dialog page for extension settings with advanced language management:
 
 **Supported Languages (dynamically discovered):**
 C#, Visual Basic, F#, C/C++, JavaScript, TypeScript, Python, PowerShell, XAML, JSON, XML, YAML, HTML, CSS, SCSS, LESS, Razor, T-SQL, and many more—any language with VS outlining support.
+
+**License Enforcement:**
+- C# is always available (free tier)
+- All other languages require valid PRO license
+- License validation occurs on language toggle attempt
+- Settings persist even without license (re-enabled when license activated)
 
 #### ContentTypeDisplayNameMapper (`OptionPage/ContentTypeDisplayNameMapper.cs`)
 **NEW in latest version**: Centralized mapping of content type names to user-friendly display names.
@@ -312,12 +510,56 @@ The project builds to a `.vsix` file that can be:
 9. **Performance**: Open large files (>1000 lines), verify smooth scrolling
 10. **Text editing**: Add/remove code blocks, verify tags update correctly
 
+**License-Related Testing:**
+
+1. **No License State**:
+   - Verify C# is available and toggleable
+   - Verify other languages show 🔒 [PRO] indicator
+   - Attempt to enable non-C# language, verify dialog and prevention
+   - Verify license status shows "No PRO License - C# only"
+
+2. **License Activation**:
+   - Click "Buy Pro", verify email check and browser launch
+   - Enter invalid key, verify error handling
+   - Enter valid key, verify activation confirmation dialog
+   - Cancel confirmation, verify no activation
+   - Confirm activation, verify success message
+   - Verify license status updates to show expiration date
+   - Verify lock indicators removed from language list
+   - Verify non-C# languages now toggleable
+
+3. **Active License State**:
+ - Verify license status shows green with expiration date
+ - Verify all languages available without restrictions
+   - Toggle non-C# languages, verify no prompts
+
+4. **License Expiration**:
+   - Test with expired JWT token
+   - Verify falls back to free tier (C# only)
+   - Verify lock indicators return for non-C# languages
+
+5. **Email Handling**:
+   - Test when VS email not available
+   - Verify warning message before opening store
+   - Verify activation prevented if email unavailable
+
+6. **Settings Persistence**:
+   - Activate license, close VS, reopen
+   - Verify license token persisted
+   - Verify language restrictions still apply correctly
+
 ### Debug Mode Features
 The code includes extensive `#if DEBUG` logging:
 - Position tracking
 - Visibility decisions
 - Tag creation
 - Performance timing
+
+**License Debugging:**
+- Log license validation attempts
+- Log JWT token parsing (sanitize sensitive data)
+- Log email retrieval from VS settings
+- Log API calls for activation/re-acquisition
 
 ## Extension Points for Future Work
 
@@ -331,18 +573,37 @@ The code includes extensive `#if DEBUG` logging:
 7. **Localization**: Translate display names and UI for international users
 8. **Import/export settings**: Share language preferences between machines
 
+**License System Enhancements:**
+1. **License management UI**: View license details, deactivate, transfer
+2. **Offline grace period**: Allow temporary use after expiration
+3. **Team licenses**: Multi-user license management
+4. **License recovery**: Retrieve lost license keys via email
+5. **Trial period**: Time-limited full feature access
+6. **Notification system**: Warn before expiration, prompt for renewal
+7. **License usage analytics**: Track activation success rates (anonymized)
+
 ### Recent Improvements
 1. **ContentTypeDisplayNameMapper**: Centralized, maintainable display name mapping
 2. **Name-based settings**: Robust settings persistence across versions
 3. **Dynamic language discovery**: No hardcoded language lists
 4. **Telemetry opt-in**: Privacy-respecting usage analytics
 5. **Improved fallback logic**: Better display names for unknown content types
+6. **PRO licensing model**: Freemium approach with C# free forever
+7. **JWT-based validation**: Secure, stateless license verification
+8. **Email binding**: Ties licenses to VS user identity
+9. **Re-acquisition support**: Seamless license recovery on new machines
+10. **UI integration**: Clear status display and restriction enforcement
+11. **Graceful degradation**: Falls back to C#-only on license issues
 
 ### Known Limitations
 1. Requires outlining support for the language (most major languages supported)
 2. No support for files without outlining enabled
 3. Performance degrades on extremely large files (>10,000 lines)
 4. Tag placement depends on VS's outlining region boundaries
+5. Activation requires internet access (initially)
+6. Email must be set up in Visual Studio for license binding
+7. No offline activation or grace period after expiration
+8. Single-device activation per license key
 
 ## Code Style and Conventions
 
@@ -353,6 +614,14 @@ The code includes extensive `#if DEBUG` logging:
 - **Disposal**: Proper `IDisposable` implementation with event unsubscription
 - **Static helpers**: Utility classes like `ContentTypeDisplayNameMapper` are static for performance
 
+**License Code Patterns:**
+- Async/await for activation API calls
+- Try-catch-finally for robust error handling
+- User confirmation dialogs for binding operations
+- Immediate UI feedback during long operations (button text changes)
+- Modal dialogs for important notifications
+- Color coding for status (green = active, gray = inactive)
+
 ## Dependencies and References
 
 ### Critical VS SDK Assemblies
@@ -362,9 +631,10 @@ The code includes extensive `#if DEBUG` logging:
 - `Microsoft.VisualStudio.Imaging`
 - `Microsoft.VisualStudio.Shell.15.0`
 
-### Community Packages
-- `CommunityToolkit.HighPerformance`
-- `Community.VisualStudio.Toolkit.17`
+### License System Dependencies
+- HTTP client for API communication (if not using built-in)
+- JWT parsing library (System.IdentityModel.Tokens.Jwt or similar)
+- Visual Studio Shell services for email retrieval
 
 ## Contributing Guidelines
 
@@ -379,6 +649,16 @@ When working on this project:
 7. **Update version**: Increment version in `source.extension.cs` and manifest
 8. **Update display names**: Add new languages to `ContentTypeDisplayNameMapper`
 9. **Test settings migration**: Ensure old settings load correctly with new code
+
+**License System:**
+1. **Never bypass license checks**: All language restrictions must be enforced
+2. **Secure token handling**: Don't log full JWT tokens, sanitize in debug output
+3. **Clear user messaging**: License prompts should be helpful, not annoying
+4. **Graceful failures**: License issues shouldn't crash extension
+5. **Privacy conscious**: Only collect email with user consent, explain usage
+6. **Test thoroughly**: License edge cases (expired, invalid, missing email)
+7. **Store consistency**: Keep store URL and messaging aligned
+8. **Update documentation**: Document any license flow changes
 
 ## AI Agent Guidance
 
@@ -416,10 +696,32 @@ When working on this project:
 - Use dependency injection (MEF) for testability
 - Document public APIs with XML comments
 
-## Architecture Decisions
+### When modifying license logic:
+- Always check `Services.LicenseService.HasValidProLicense()` before allowing non-C# features
+- Use `Languages.CSharp` constant for free language identification
+- Maintain case-insensitive language name comparisons
+- Update UI immediately after license state changes
+- Handle network failures gracefully during activation
+- Never hardcode license keys or bypass checks
+- Test with expired tokens to verify fallback behavior
+- Ensure email retrieval fails gracefully
 
-### Why ContentTypeDisplayNameMapper?
-**Problem**: Display names were scattered in a switch statement, hard to maintain and extend.
+### When adding new language-dependent features:
+- Check license status before enabling for non-C# languages
+- Show informative PRO-required messages
+- Add visual indicators (🔒 or [PRO] tags) in UI
+- Allow feature configuration but prevent execution without license
+- Document that feature requires PRO license
+- Consider free tier alternatives or limited functionality
+
+### When debugging license issues:
+- Check Activity Log for license validation failures
+- Verify JWT token format and expiration in settings
+- Test email retrieval from Visual Studio settings
+- Confirm API endpoint availability
+- Check for network connectivity issues
+- Verify license key format matches expected pattern
+- Test activation flow end-to-end with test keys
 
 **Solution**: Centralized static class with dictionary-based mapping.
 
