@@ -10,7 +10,7 @@ namespace CodeBlockEndTag
     {
         public const string Id = "CodeBlockEndTag.KhaosCoders.5743e483-e347-4815-8c9d-7fc46ca75382";
         public const string Name = "CodeBlockEndTag";
-        public const string Description = @"All folding regions in Visual Studio will get tagged at the end with information about this region. 
+        public const string Description = @"All folding regions in Visual Studio will get tagged at the end with information about this region.
 This includes actual #regions, code blocks or any other form of folding.";
         public const string Language = "en-US";
         public const string Version = "4.0.0.7";
