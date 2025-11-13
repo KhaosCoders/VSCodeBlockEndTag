@@ -1,15 +1,15 @@
-﻿using System;
+﻿using CodeBlockEndTag.Model;
+using Microsoft.Internal.VisualStudio.Shell.Interop;
+using System;
 using System.Diagnostics;
 using System.Windows.Forms;
-using CodeBlockEndTag.Model;
-using Microsoft.Internal.VisualStudio.Shell.Interop;
 
 namespace CodeBlockEndTag.OptionPage;
 
 public partial class CBEOptionPageControl : UserControl
 {
-    private const string DonateUrl = "https://www.paypal.com/donate?hosted_button_id=37PBGZPHXY8EC";
     private const string GitHubUrl = "https://github.com/KhaosCoders/VSCodeBlockEndTag";
+    private const string ProStoreUrl = "https://khaoscoders.onfastspring.com/cbe-1y";
 
     public CBEOptionPageControl()
     {
@@ -20,8 +20,20 @@ public partial class CBEOptionPageControl : UserControl
 
     public void Initialize()
     {
+        // Track options page opened
+        try
+        {
+            bool hasLicense = Services.LicenseService.HasValidProLicense();
+            Telemetry.TelemetryEvents.TrackOptionsPageOpened(hasLicense);
+        }
+        catch
+        {
+            // Telemetry should never break functionality
+        }
+
         LoadOptionsToUI();
         LoadSupportedLanguagesToUI();
+        LoadLicenseStatusToUI();
     }
 
     private void LoadOptionsToUI()
@@ -39,15 +51,28 @@ public partial class CBEOptionPageControl : UserControl
         rdbTextOnly.Checked = optionsPage.CBEDisplayMode == (int)DisplayModes.Text;
 
         txtMargin.Text = optionsPage.CBEMargin.ToString();
+        chkTelemetryEnabled.Checked = optionsPage.TelemetryEnabled;
     }
 
     private void LoadSupportedLanguagesToUI()
     {
         lviLanguages.Items.Clear();
+        bool hasProLicense = Services.LicenseService.HasValidProLicense();
+
         string[] langs = optionsPage.SupportedLangDisplayNames;
+        var supportedLangs = optionsPage.GetSupportedLanguages();
+
         for (int i = 0; i < langs.Length; i++)
         {
-            lviLanguages.Items.Add(langs[i]);
+            bool isCSharp = supportedLangs[i].Name.Equals(Languages.CSharp, StringComparison.OrdinalIgnoreCase);
+
+            string displayName = langs[i];
+            if (!isCSharp && !hasProLicense)
+            {
+                displayName += " 🔒 [PRO]"; // Add lock indicator
+            }
+
+            lviLanguages.Items.Add(displayName);
             if (optionsPage.SupportedLangActive[i])
             {
                 lviLanguages.SetItemChecked(i, true);
@@ -55,14 +80,137 @@ public partial class CBEOptionPageControl : UserControl
         }
     }
 
-    private void LblLink_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+    private void LoadLicenseStatusToUI()
     {
-        Process.Start(new ProcessStartInfo(DonateUrl));
+        bool hasLicense = Services.LicenseService.HasValidProLicense();
+
+        if (hasLicense)
+        {
+            var expDate = Services.LicenseService.GetLicenseExpirationDate();
+            lblLicenseStatus.Text = $"✓ PRO License Active (Expires: {expDate?.ToShortDateString() ?? "unknown"})";
+            lblLicenseStatus.ForeColor = System.Drawing.Color.Green;
+            lblProInfo.Text = "All features unlocked!";
+        }
+        else
+        {
+            lblLicenseStatus.Text = "No PRO License - C# only";
+            lblLicenseStatus.ForeColor = System.Drawing.Color.Gray;
+            lblProInfo.Text = "Unlock all features with PRO!";
+        }
+    }
+
+    /// <summary>
+    /// Enables all supported languages (called after license activation)
+    /// </summary>
+    private void EnableAllLanguages()
+    {
+        var supportedLangs = optionsPage.GetSupportedLanguages();
+        for (int i = 0; i < supportedLangs.Length; i++)
+        {
+            optionsPage.SetSupportedLangActive(i, true);
+        }
+
+        // Update the ListView to reflect the changes
+        for (int i = 0; i < lviLanguages.Items.Count; i++)
+        {
+            lviLanguages.SetItemChecked(i, true);
+        }
     }
 
     private void LnkGitHub_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
     {
         Process.Start(new ProcessStartInfo(GitHubUrl));
+    }
+
+    private void LnkBuyPro_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+    {
+        string email = Services.LicenseService.GetVisualStudioEmail();
+        if (string.IsNullOrEmpty(email))
+        {
+            MessageBox.Show("Couldn't read your Microsoft email address from Visual Studio settings. This is required for license activation after you bought a key. Please open an issue on GitHub.", "Activation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        // Track store page opened
+        try
+        {
+            Telemetry.TelemetryEvents.TrackStorePageOpened(!string.IsNullOrEmpty(email));
+        }
+        catch
+        {
+            // Telemetry should never break functionality
+        }
+
+        Process.Start(new ProcessStartInfo(ProStoreUrl));
+    }
+
+    private async void BtnActivateLicense_Click(object sender, EventArgs e)
+    {
+        string key = txtLicenseKey.Text.Trim();
+        if (string.IsNullOrEmpty(key))
+        {
+            MessageBox.Show("Please enter a license key.", "Activation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        try
+        {
+            btnActivateLicense.Enabled = false;
+            btnActivateLicense.Text = "Activating...";
+
+            string email = Services.LicenseService.GetVisualStudioEmail();
+            if (string.IsNullOrEmpty(email))
+            {
+                MessageBox.Show("Email address is required for license activation.", "Activation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Try re-aquiring before activated token
+            string jwt = await Services.LicenseService.RequireActivatedTokenAsync(key, email);
+
+            if (string.IsNullOrWhiteSpace(jwt))
+            {
+                // Ask user to confirm binding the license to their email
+                DialogResult result = MessageBox.Show(
+                $"This will bind the license key to your email address:\n\n{email}\n\nDo you want to continue?",
+                "Confirm License Activation",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+                if (result != DialogResult.Yes)
+                {
+                    return;
+                }
+                jwt = await Services.LicenseService.ActivateLicenseAsync(key, email);
+            }
+
+            optionsPage.LicenseToken = jwt;
+
+            // Enable all languages after successful activation
+            EnableAllLanguages();
+
+            optionsPage.SaveSettingsToStorage();
+
+            MessageBox.Show("License activated successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            LoadLicenseStatusToUI();
+            LoadSupportedLanguagesToUI(); // Refresh language list to remove locks
+            txtLicenseKey.Text = ""; // Clear the input
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Activation failed: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            btnActivateLicense.Enabled = true;
+            btnActivateLicense.Text = "Activate";
+        }
+    }
+
+    private void TxtLicenseKey_TextChanged(object sender, EventArgs e)
+    {
+        // Enable activate button only if key is entered
+        btnActivateLicense.Enabled = !string.IsNullOrWhiteSpace(txtLicenseKey.Text);
     }
 
     private void ChkCBETaggerEnabled_CheckedChanged(object sender, EventArgs e)
@@ -136,6 +284,22 @@ public partial class CBEOptionPageControl : UserControl
 
     private void LviLanguages_ItemCheck(object sender, ItemCheckEventArgs e)
     {
+        var supportedLangs = optionsPage.GetSupportedLanguages();
+        string langName = supportedLangs[e.Index].Name;
+        bool isCSharp = langName.Equals(Languages.CSharp, StringComparison.OrdinalIgnoreCase);
+
+        // Prevent enabling non-C# languages without PRO license
+        if (!isCSharp && !Services.LicenseService.HasValidProLicense() && e.NewValue == CheckState.Checked)
+        {
+            e.NewValue = CheckState.Unchecked;
+            MessageBox.Show(
+              "This language requires a PRO license.\n\nC# is free to use, but all other languages require a PRO license.\n\nClick 'Buy Pro' to unlock all languages!",
+                       "PRO Feature Required",
+               MessageBoxButtons.OK,
+           MessageBoxIcon.Information);
+            return;
+        }
+
         optionsPage.SetSupportedLangActive(e.Index, e.NewValue == CheckState.Checked);
     }
 
@@ -154,5 +318,10 @@ public partial class CBEOptionPageControl : UserControl
         {
             optionsPage.CBEMargin = 0;
         }
+    }
+
+    private void ChkTelemetryEnabled_CheckedChanged(object sender, EventArgs e)
+    {
+        optionsPage.TelemetryEnabled = chkTelemetryEnabled.Checked;
     }
 }

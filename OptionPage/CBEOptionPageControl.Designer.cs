@@ -40,9 +40,6 @@
             this.rdbTextOnly = new System.Windows.Forms.RadioButton();
             this.rdbIconOnly = new System.Windows.Forms.RadioButton();
             this.rdbIconAndText = new System.Windows.Forms.RadioButton();
-            this.cntInfo = new System.Windows.Forms.GroupBox();
-            this.lblLink = new System.Windows.Forms.LinkLabel();
-            this.lblInfo = new System.Windows.Forms.Label();
             this.cntLanguages = new System.Windows.Forms.GroupBox();
             this.lviLanguages = new System.Windows.Forms.CheckedListBox();
             this.lnkGitHub = new System.Windows.Forms.LinkLabel();
@@ -51,12 +48,19 @@
             this.cntTagPos = new System.Windows.Forms.GroupBox();
             this.txtMargin = new System.Windows.Forms.TextBox();
             this.lblMargin = new System.Windows.Forms.Label();
+            this.chkTelemetryEnabled = new System.Windows.Forms.CheckBox();
+            this.cntLicense = new System.Windows.Forms.GroupBox();
+            this.lblLicenseStatus = new System.Windows.Forms.Label();
+            this.txtLicenseKey = new System.Windows.Forms.TextBox();
+            this.btnActivateLicense = new System.Windows.Forms.Button();
+            this.lnkBuyPro = new System.Windows.Forms.LinkLabel();
+            this.lblProInfo = new System.Windows.Forms.Label();
             this.cntVisibilityMode.SuspendLayout();
             this.cntNavigateMode.SuspendLayout();
             this.cntDisplayMode.SuspendLayout();
-            this.cntInfo.SuspendLayout();
             this.cntLanguages.SuspendLayout();
             this.cntTagPos.SuspendLayout();
+            this.cntLicense.SuspendLayout();
             this.SuspendLayout();
             // 
             // chkCBETaggerEnabled
@@ -201,40 +205,6 @@
             this.rdbIconAndText.UseVisualStyleBackColor = true;
             this.rdbIconAndText.CheckedChanged += new System.EventHandler(this.RdbIconAndText_CheckedChanged);
             // 
-            // cntInfo
-            // 
-            this.cntInfo.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.cntInfo.Controls.Add(this.lblLink);
-            this.cntInfo.Controls.Add(this.lblInfo);
-            this.cntInfo.Location = new System.Drawing.Point(0, 386);
-            this.cntInfo.Name = "cntInfo";
-            this.cntInfo.Size = new System.Drawing.Size(430, 54);
-            this.cntInfo.TabIndex = 10;
-            this.cntInfo.TabStop = false;
-            this.cntInfo.Text = "Info";
-            // 
-            // lblLink
-            // 
-            this.lblLink.AutoSize = true;
-            this.lblLink.LinkBehavior = System.Windows.Forms.LinkBehavior.AlwaysUnderline;
-            this.lblLink.Location = new System.Drawing.Point(10, 34);
-            this.lblLink.Name = "lblLink";
-            this.lblLink.Size = new System.Drawing.Size(86, 13);
-            this.lblLink.TabIndex = 1;
-            this.lblLink.TabStop = true;
-            this.lblLink.Text = "PayPal Donation";
-            this.lblLink.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.LblLink_LinkClicked);
-            // 
-            // lblInfo
-            // 
-            this.lblInfo.AutoSize = true;
-            this.lblInfo.Location = new System.Drawing.Point(7, 17);
-            this.lblInfo.Name = "lblInfo";
-            this.lblInfo.Size = new System.Drawing.Size(350, 13);
-            this.lblInfo.TabIndex = 0;
-            this.lblInfo.Text = "This extension is 100% free to use. But you might buy me a drink or two ;)";
-            // 
             // cntLanguages
             // 
             this.cntLanguages.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
@@ -245,7 +215,7 @@
             this.cntLanguages.Controls.Add(this.lblSuggestMore);
             this.cntLanguages.Location = new System.Drawing.Point(233, 61);
             this.cntLanguages.Name = "cntLanguages";
-            this.cntLanguages.Size = new System.Drawing.Size(188, 319);
+            this.cntLanguages.Size = new System.Drawing.Size(188, 363);
             this.cntLanguages.TabIndex = 10;
             this.cntLanguages.TabStop = false;
             this.cntLanguages.Text = "Enable for code type";
@@ -260,7 +230,7 @@
             "Dummy"});
             this.lviLanguages.Location = new System.Drawing.Point(6, 19);
             this.lviLanguages.Name = "lviLanguages";
-            this.lviLanguages.Size = new System.Drawing.Size(176, 244);
+            this.lviLanguages.Size = new System.Drawing.Size(176, 289);
             this.lviLanguages.TabIndex = 11;
             this.lviLanguages.ItemCheck += new System.Windows.Forms.ItemCheckEventHandler(this.LviLanguages_ItemCheck);
             // 
@@ -269,7 +239,7 @@
             this.lnkGitHub.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lnkGitHub.AutoSize = true;
             this.lnkGitHub.LinkBehavior = System.Windows.Forms.LinkBehavior.AlwaysUnderline;
-            this.lnkGitHub.Location = new System.Drawing.Point(6, 300);
+            this.lnkGitHub.Location = new System.Drawing.Point(6, 344);
             this.lnkGitHub.Name = "lnkGitHub";
             this.lnkGitHub.Size = new System.Drawing.Size(77, 13);
             this.lnkGitHub.TabIndex = 12;
@@ -281,11 +251,11 @@
             // 
             this.lblSuggestMore.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.lblSuggestMore.AutoSize = true;
-            this.lblSuggestMore.Location = new System.Drawing.Point(4, 281);
+            this.lblSuggestMore.Location = new System.Drawing.Point(4, 325);
             this.lblSuggestMore.Name = "lblSuggestMore";
-            this.lblSuggestMore.Size = new System.Drawing.Size(126, 13);
+            this.lblSuggestMore.Size = new System.Drawing.Size(167, 13);
             this.lblSuggestMore.TabIndex = 11;
-            this.lblSuggestMore.Text = "Feel free to suggest more";
+            this.lblSuggestMore.Text = "Feel free to suggest more features";
             // 
             // lblFont
             // 
@@ -327,33 +297,107 @@
             this.lblMargin.TabIndex = 0;
             this.lblMargin.Text = "Margin";
             // 
+            // chkTelemetryEnabled
+            // 
+            this.chkTelemetryEnabled.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.chkTelemetryEnabled.AutoSize = true;
+            this.chkTelemetryEnabled.Location = new System.Drawing.Point(24, 394);
+            this.chkTelemetryEnabled.Name = "chkTelemetryEnabled";
+            this.chkTelemetryEnabled.Size = new System.Drawing.Size(167, 30);
+            this.chkTelemetryEnabled.TabIndex = 15;
+            this.chkTelemetryEnabled.Text = "Send anonymous usage data \r\nto help improve this extension";
+            this.chkTelemetryEnabled.UseVisualStyleBackColor = true;
+            // 
+            // cntLicense
+            // 
+            this.cntLicense.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.cntLicense.Controls.Add(this.lblLicenseStatus);
+            this.cntLicense.Controls.Add(this.txtLicenseKey);
+            this.cntLicense.Controls.Add(this.btnActivateLicense);
+            this.cntLicense.Controls.Add(this.lnkBuyPro);
+            this.cntLicense.Controls.Add(this.lblProInfo);
+            this.cntLicense.Location = new System.Drawing.Point(24, 430);
+            this.cntLicense.Name = "cntLicense";
+            this.cntLicense.Size = new System.Drawing.Size(397, 67);
+            this.cntLicense.TabIndex = 16;
+            this.cntLicense.TabStop = false;
+            this.cntLicense.Text = "License";
+            // 
+            // lblLicenseStatus
+            // 
+            this.lblLicenseStatus.AutoSize = true;
+            this.lblLicenseStatus.Location = new System.Drawing.Point(105, 18);
+            this.lblLicenseStatus.Name = "lblLicenseStatus";
+            this.lblLicenseStatus.Size = new System.Drawing.Size(0, 13);
+            this.lblLicenseStatus.TabIndex = 4;
+            // 
+            // txtLicenseKey
+            // 
+            this.txtLicenseKey.Location = new System.Drawing.Point(6, 34);
+            this.txtLicenseKey.Name = "txtLicenseKey";
+            this.txtLicenseKey.Size = new System.Drawing.Size(185, 20);
+            this.txtLicenseKey.TabIndex = 2;
+            this.txtLicenseKey.TextChanged += new System.EventHandler(this.TxtLicenseKey_TextChanged);
+            // 
+            // btnActivateLicense
+            // 
+            this.btnActivateLicense.Location = new System.Drawing.Point(197, 32);
+            this.btnActivateLicense.Name = "btnActivateLicense";
+            this.btnActivateLicense.Size = new System.Drawing.Size(75, 23);
+            this.btnActivateLicense.TabIndex = 3;
+            this.btnActivateLicense.Text = "Activate";
+            this.btnActivateLicense.UseVisualStyleBackColor = true;
+            this.btnActivateLicense.Click += new System.EventHandler(this.BtnActivateLicense_Click);
+            // 
+            // lnkBuyPro
+            // 
+            this.lnkBuyPro.AutoSize = true;
+            this.lnkBuyPro.Location = new System.Drawing.Point(278, 37);
+            this.lnkBuyPro.Name = "lnkBuyPro";
+            this.lnkBuyPro.Size = new System.Drawing.Size(44, 13);
+            this.lnkBuyPro.TabIndex = 5;
+            this.lnkBuyPro.TabStop = true;
+            this.lnkBuyPro.Text = "Buy Pro";
+            this.lnkBuyPro.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.LnkBuyPro_LinkClicked);
+            // 
+            // lblProInfo
+            // 
+            this.lblProInfo.AutoSize = true;
+            this.lblProInfo.Location = new System.Drawing.Point(326, 18);
+            this.lblProInfo.Name = "lblProInfo";
+            this.lblProInfo.Size = new System.Drawing.Size(63, 13);
+            this.lblProInfo.TabIndex = 6;
+            this.lblProInfo.Text = "Unlock Pro!";
+            // 
             // CBEOptionPageControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.cntLicense);
+            this.Controls.Add(this.chkTelemetryEnabled);
             this.Controls.Add(this.cntLanguages);
-            this.Controls.Add(this.cntInfo);
             this.Controls.Add(this.cntTagPos);
             this.Controls.Add(this.lblFont);
             this.Controls.Add(this.cntDisplayMode);
             this.Controls.Add(this.cntNavigateMode);
             this.Controls.Add(this.cntVisibilityMode);
             this.Controls.Add(this.chkCBETaggerEnabled);
-            this.MinimumSize = new System.Drawing.Size(430, 440);
+            this.MinimumSize = new System.Drawing.Size(430, 500);
             this.Name = "CBEOptionPageControl";
-            this.Size = new System.Drawing.Size(430, 440);
+            this.Size = new System.Drawing.Size(430, 500);
             this.cntVisibilityMode.ResumeLayout(false);
             this.cntVisibilityMode.PerformLayout();
             this.cntNavigateMode.ResumeLayout(false);
             this.cntNavigateMode.PerformLayout();
             this.cntDisplayMode.ResumeLayout(false);
             this.cntDisplayMode.PerformLayout();
-            this.cntInfo.ResumeLayout(false);
-            this.cntInfo.PerformLayout();
             this.cntLanguages.ResumeLayout(false);
             this.cntLanguages.PerformLayout();
             this.cntTagPos.ResumeLayout(false);
             this.cntTagPos.PerformLayout();
+            this.cntLicense.ResumeLayout(false);
+            this.cntLicense.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -372,9 +416,6 @@
         private System.Windows.Forms.RadioButton rdbTextOnly;
         private System.Windows.Forms.RadioButton rdbIconOnly;
         private System.Windows.Forms.RadioButton rdbIconAndText;
-        private System.Windows.Forms.GroupBox cntInfo;
-        private System.Windows.Forms.LinkLabel lblLink;
-        private System.Windows.Forms.Label lblInfo;
         private System.Windows.Forms.GroupBox cntLanguages;
         private System.Windows.Forms.LinkLabel lnkGitHub;
         private System.Windows.Forms.Label lblSuggestMore;
@@ -384,5 +425,12 @@
         private System.Windows.Forms.GroupBox cntTagPos;
         private System.Windows.Forms.TextBox txtMargin;
         private System.Windows.Forms.Label lblMargin;
+        private System.Windows.Forms.CheckBox chkTelemetryEnabled;
+        private System.Windows.Forms.GroupBox cntLicense;
+        private System.Windows.Forms.Label lblLicenseStatus;
+        private System.Windows.Forms.TextBox txtLicenseKey;
+        private System.Windows.Forms.Button btnActivateLicense;
+        private System.Windows.Forms.LinkLabel lnkBuyPro;
+        private System.Windows.Forms.Label lblProInfo;
     }
 }

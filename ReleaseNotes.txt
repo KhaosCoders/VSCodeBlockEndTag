@@ -1,4 +1,14 @@
-﻿Version 3.2.1.1:
+﻿Version 4.0.0.10:
+	Complete refresh!
+	Now supports all languages supported by VisualStudio
+	Uses folding regions for tags. Not only code blocks in { } backets
+	Added option for margin placement of tags
+	Added PRO license with all languages unlocked (C# remains free)
+	Added telemetry (can be disabled in options)
+	Fixed wrapping and truncation of long tags
+	Fixed some minor bugs on tag placement and rendering
+
+Version 3.2.1.1:
 	Fixed measure of tags sometimes is too small
 	Fixed text color sometimes is black
 

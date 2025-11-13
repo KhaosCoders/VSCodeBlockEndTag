@@ -5,10 +5,12 @@
 //------------------------------------------------------------------------------
 
 using CodeBlockEndTag.Model;
+using CodeBlockEndTag.Services;
 using EnvDTE;
 using EnvDTE80;
 using Microsoft.Internal.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio;
+using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
 using Microsoft.VisualStudio.Utilities;
@@ -20,7 +22,6 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using static Microsoft.VisualStudio.Threading.AsyncReaderWriterLock;
 
 namespace CodeBlockEndTag;
 
@@ -82,6 +83,11 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
     public IVsActivityLog Log { get; private set; }
 
     /// <summary>
+    /// Info bar service for showing notifications
+    /// </summary>
+    private InfoBarService _infoBarService;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="CBETagPackage"/> class.
     /// </summary>
     public CBETagPackage()
@@ -97,14 +103,14 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
     /// <summary>
     /// Load the list of content types
     /// </summary>
-    internal static void ReadContentTypes(IContentTypeRegistryService ContentTypeRegistryService)
+    public void ReadContentTypes(IContentTypeRegistryService contentTypeRegistryService)
     {
         if (ContentTypes.Count > 0)
         {
             return;
         }
 
-        foreach (var ct in ContentTypeRegistryService.ContentTypes)
+        foreach (var ct in contentTypeRegistryService.ContentTypes)
         {
             if (ct.IsOfType("code"))
             {
@@ -158,7 +164,7 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
     /// Initialization of the package; this method is called right after the package is sited, so this is the place
     /// where you can put all the initialization code that rely on services provided by VisualStudio.
     /// </summary>
-    protected override async System.Threading.Tasks.Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
+    protected override async Task InitializeAsync(CancellationToken cancellationToken, IProgress<ServiceProgressData> progress)
     {
         await base.InitializeAsync(cancellationToken, progress).ConfigureAwait(false);
 
@@ -180,8 +186,49 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
         Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), "Register IFontAndColorDefaultsProvider");
         ((IServiceContainer)this).AddService(typeof(IFontAndColorDefaultsProvider), this, true);
 
+        // Read all content types
+        var componentModel = await GetServiceAsync(typeof(SComponentModel)) as IComponentModel;
+        var contentTypeRegistryService = componentModel?.GetService<IContentTypeRegistryService>();
+        ReadContentTypes(contentTypeRegistryService);
+
         _optionPage = (OptionPage.CBEOptionPage)Instance.GetDialogPage(typeof(OptionPage.CBEOptionPage));
         _optionPage.OptionChanged += Page_OptionChanged;
+
+        // Initialize license service with stored token
+        Services.LicenseService.Initialize(_optionPage.LicenseToken);
+
+        // Validate license on startup and log status
+        if (!string.IsNullOrEmpty(_optionPage.LicenseToken))
+        {
+            if (Services.LicenseService.HasValidProLicense())
+            {
+                var expDate = Services.LicenseService.GetLicenseExpirationDate();
+                Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(),
+                 $"PRO license active, expires: {expDate?.ToString() ?? "unknown"}");
+            }
+            else
+            {
+                Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_WARNING, ToString(),
+                "PRO license expired or invalid");
+            }
+        }
+        else
+        {
+            Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(),
+                       "No PRO license - running in free mode (C# only)");
+        }
+
+        // Initialize telemetry
+        await InitializeTelemetryAsync();
+
+        // Initialize info bar service
+        _infoBarService = new InfoBarService(this, Log);
+
+        // Show language support info bar if not seen before
+        if (!_optionPage.LanguageSupportInfoBarSeen)
+        {
+            ShowLanguageSupportInfoBar();
+        }
 
         // Update taggers, that were initialized before the package
         Page_OptionChanged(this);
@@ -191,14 +238,92 @@ public sealed class CBETagPackage : AsyncPackage, IVsFontAndColorDefaultsProvide
         Log.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), "InitializeAsync ended");
     }
 
+    /// <summary>
+    /// Initializes the telemetry service
+    /// </summary>
+    private async Task InitializeTelemetryAsync()
+    {
+        try
+        {
+            // Use Connection String (modern API) instead of deprecated Instrumentation Key
+            const string connectionString = "InstrumentationKey=3a7d81b1-803b-43c5-a782-68c95fc32325;IngestionEndpoint=https://westeurope-5.in.applicationinsights.azure.com/;LiveEndpoint=https://westeurope.livediagnostics.monitor.azure.com/;ApplicationId=da69b065-c68c-4172-8ba3-aa3681bd12cc";
+
+            // Initialize telemetry service
+            Telemetry.TelemetryService.Instance.Initialize(
+                connectionString,
+                _optionPage?.TelemetryEnabled ?? true);
+
+            // Track extension loaded
+            var vsVersion = await GetVsVersionAsync();
+            Telemetry.TelemetryEvents.TrackExtensionLoaded(vsVersion.ToString());
+
+            Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), "Telemetry initialized");
+        }
+        catch (Exception ex)
+        {
+            // Telemetry should never break the extension
+            Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_WARNING, ToString(), $"Telemetry initialization failed: {ex.Message}");
+        }
+    }
+
     protected override void Dispose(bool disposing)
     {
         UnsubscribeFromColorChangeEvents();
+
+        // Flush and dispose telemetry
+        try
+        {
+            Telemetry.TelemetryService.Instance.Flush();
+            Telemetry.TelemetryService.Instance.Dispose();
+        }
+        catch
+        {
+            // Fail silently
+        }
 
         base.Dispose(disposing);
     }
 
     private void Page_OptionChanged(object _) => PackageOptionChanged?.Invoke(this);
+
+    /// <summary>
+    /// Shows the language support info bar
+    /// </summary>
+    private void ShowLanguageSupportInfoBar()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+
+        try
+        {
+            _infoBarService?.ShowLanguageSupportInfoBar();
+        }
+        catch (Exception ex)
+        {
+            Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, ToString(), $"Error showing language support info bar: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Marks the language support info bar as seen
+    /// </summary>
+    public void MarkLanguageSupportInfoBarAsSeen()
+    {
+        ThreadHelper.ThrowIfNotOnUIThread();
+
+        try
+        {
+            if (_optionPage != null)
+            {
+                _optionPage.LanguageSupportInfoBarSeen = true;
+                _optionPage.SaveSettingsToStorage();
+                Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_INFORMATION, ToString(), "Language support info bar marked as seen");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log?.LogEntry((uint)__ACTIVITYLOG_ENTRYTYPE.ALE_ERROR, ToString(), $"Error marking info bar as seen: {ex.Message}");
+        }
+    }
 
     private static void FontAndColorsChanged(object sender, EventArgs args)
     {
